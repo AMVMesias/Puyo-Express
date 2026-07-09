@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+}
+
+@keyframes login-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes login-route-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes login-hero-pan {
+  0%,
+  100% {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: scale(1.08) translate3d(-10px, -6px, 0);
+  }
+}
+
+.login-fade-up {
+  animation: login-fade-up 680ms ease-out both;
+}
+
+.login-float-slow {
+  animation: login-float-slow 5.5s ease-in-out infinite;
+}
+
+.login-route-pulse {
+  animation: login-route-pulse 2.8s ease-in-out infinite;
+}
+
+.login-hero-pan {
+  animation: login-hero-pan 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-fade-up,
+  .login-float-slow,
+  .login-route-pulse,
+  .login-hero-pan {
+    animation: none;
+  }
+}

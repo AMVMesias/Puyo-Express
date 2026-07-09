@@ -1,0 +1,6 @@
+{
+  "name": "Puyo Express",
+  "description": "Logística local de entrega de comida y comisiones para restaurantes, repartidores y turistas en Puyo, Ecuador.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
