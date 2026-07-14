@@ -7,7 +7,7 @@ import { Button } from '../components/atoms/Button';
 import { Card } from '../components/atoms/Card';
 import { Input } from '../components/atoms/Field';
 
-export function LoginPage() {
+export function LoginPage({ onNavigateToRegister }: { onNavigateToRegister: () => void }) {
   const { login } = useAuth();
   const { notify } = useToast();
   const [username, setUsername] = useState('');
@@ -114,17 +114,16 @@ export function LoginPage() {
               {isSubmitting ? 'Ingresando...' : 'Entrar a la app'}
             </Button>
 
-            {/* Test credentials info */}
-            <div className="space-y-2">
-              <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">
-                <User className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <div>
-                  <p className="font-bold mb-1">Cuentas de prueba:</p>
-                  <p><span className="font-semibold">Cliente:</span> cliente / Cliente2026!</p>
-                  <p><span className="font-semibold">Restaurante:</span> restaurante / Restaurante2026!</p>
-                  <p><span className="font-semibold">Repartidor:</span> repartidor / Repartidor2026!</p>
-                </div>
-              </div>
+            {/* Removed Test Credentials */}
+            
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onNavigateToRegister}
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
+              >
+                ¿No tienes cuenta? Regístrate aquí
+              </button>
             </div>
           </form>
         </Card>

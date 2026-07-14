@@ -5,6 +5,19 @@ import { ToastProvider } from './application/toast/ToastProvider';
 import { DashboardPage } from './presentation/pages/DashboardPage';
 import { LoginPage } from './presentation/pages/LoginPage';
 
+import { useState } from 'react';
+import { RegisterPage } from './presentation/pages/RegisterPage';
+
+function AuthSwitch() {
+  const [view, setView] = useState<'login' | 'register'>('login');
+
+  if (view === 'login') {
+    return <LoginPage onNavigateToRegister={() => setView('register')} />;
+  }
+
+  return <RegisterPage onNavigateToLogin={() => setView('login')} />;
+}
+
 function AppGate() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -19,7 +32,7 @@ function AppGate() {
     );
   }
 
-  if (!isAuthenticated) return <LoginPage />;
+  if (!isAuthenticated) return <AuthSwitch />;
 
   return (
     <DeliveryProvider>

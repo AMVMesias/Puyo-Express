@@ -17,6 +17,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login(username: string, password: string): Promise<boolean>;
   logout(): Promise<void>;
+  register(username: string, email: string, password: string, role: UserRole): Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -80,6 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const register = useCallback(async (username: string, email: string, password: string, role: UserRole): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, role }),
+      });
+
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await fetch(`${API_URL}/auth/logout`, {
@@ -100,8 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout,
+      register,
     }),
-    [user, isLoading, login, logout],
+    [user, isLoading, login, logout, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
