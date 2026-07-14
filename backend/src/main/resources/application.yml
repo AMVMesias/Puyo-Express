@@ -1,0 +1,51 @@
+# ===========================
+# Server
+# ===========================
+server:
+  port: 8080
+
+# ===========================
+# Database (PostgreSQL)
+# ===========================
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/${POSTGRES_DB:puyo_express_db}
+    username: ${POSTGRES_USER:puyo_admin}
+    password: ${POSTGRES_PASSWORD:PuyoExpr3ss_S3cur3!2026}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+# ===========================
+# JWT Configuration
+# ===========================
+app:
+  jwt:
+    secret: ${JWT_SECRET:default-secret-change-me-in-production}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    cookie-name: puyo_jwt
+
+# ===========================
+# CORS
+# ===========================
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
+
+# ===========================
+# Logging
+# ===========================
+logging:
+  level:
+    com.puyoexpress: DEBUG
+    org.springframework.security: INFO

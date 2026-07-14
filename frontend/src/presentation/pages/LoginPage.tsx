@@ -1,4 +1,4 @@
-import { Lock, Mail, MapPinned, Route, ShieldCheck, Store, Truck } from 'lucide-react';
+import { Lock, MapPinned, Route, ShieldCheck, Store, Truck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import loginHero from '../../../assets/puyo-express-login-hero.png';
 import { useAuth } from '../../application/auth/AuthProvider';
@@ -10,15 +10,24 @@ import { Input } from '../components/atoms/Field';
 export function LoginPage() {
   const { login } = useAuth();
   const { notify } = useToast();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const success = login(email, password);
+    setIsSubmitting(true);
 
-    if (!success) {
-      notify('Credenciales incorrectas. Revisa el correo y la contraseña configurados en .env.', 'warning');
+    try {
+      const success = await login(username, password);
+
+      if (!success) {
+        notify('Credenciales incorrectas. Verifica tu usuario y contraseña.', 'warning');
+      }
+    } catch {
+      notify('Error de conexión con el servidor.', 'warning');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,16 +86,16 @@ export function LoginPage() {
               </div>
               <h2 className="text-2xl font-black">Ingresa a la cabina</h2>
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Usa las credenciales configuradas para gestionar pedidos y despachos.
+                Inicia sesión con tu usuario para acceder a tu panel.
               </p>
             </div>
             <Input
-              autoComplete="email"
-              label="Correo"
-              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="username"
+              label="Usuario"
+              onChange={(event) => setUsername(event.target.value)}
               required
-              type="email"
-              value={email}
+              type="text"
+              value={username}
             />
             <Input
               autoComplete="current-password"
@@ -100,12 +109,22 @@ export function LoginPage() {
               className="w-full shadow-lg shadow-emerald-700/20 hover:shadow-emerald-700/30"
               icon={<Lock className="h-4 w-4" />}
               type="submit"
+              disabled={isSubmitting}
             >
-              Entrar a la app
+              {isSubmitting ? 'Ingresando...' : 'Entrar a la app'}
             </Button>
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">
-              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span>Acceso demo de frontend para proteger la vista operativa durante la presentacion.</span>
+
+            {/* Test credentials info */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">
+                <User className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="font-bold mb-1">Cuentas de prueba:</p>
+                  <p><span className="font-semibold">Cliente:</span> cliente / Cliente2026!</p>
+                  <p><span className="font-semibold">Restaurante:</span> restaurante / Restaurante2026!</p>
+                  <p><span className="font-semibold">Repartidor:</span> repartidor / Repartidor2026!</p>
+                </div>
+              </div>
             </div>
           </form>
         </Card>
