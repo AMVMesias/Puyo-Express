@@ -1,6 +1,6 @@
 import { ExternalLink, LocateFixed, MapPin, Navigation, Store } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PUYO_CENTER } from '../../../data/seeds';
+const PUYO_CENTER = { lat: -1.488333, lng: -77.994444 };
 import type { Coordinates, Landmark, Order, Restaurant } from '../../../domain/entities';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { Card } from '../atoms/Card';
@@ -258,7 +258,6 @@ export function DeliveryMap() {
     selectedLandmark,
     selectedLandmarkId,
     setActiveTab,
-    simulateDemoOrder,
     updateOrderStatus,
   } = useDelivery();
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -386,9 +385,9 @@ export function DeliveryMap() {
   const mapAction = (() => {
     if (!activeOrder) {
       return {
-        disabled: false,
-        label: selectedLandmark ? `Crear demo a ${selectedLandmark.name}` : 'Crear pedido demo',
-        run: simulateDemoOrder,
+        disabled: true,
+        label: selectedLandmark ? `Destino: ${selectedLandmark.name}` : 'Esperando pedido',
+        run: () => {},
       };
     }
 
@@ -441,9 +440,9 @@ export function DeliveryMap() {
     }
 
     return {
-      disabled: false,
-      label: 'Crear otro demo',
-      run: simulateDemoOrder,
+      disabled: true,
+      label: 'Sin acciones',
+      run: () => {},
     };
   })();
 

@@ -13,7 +13,6 @@ export function AppHeader() {
     pendingSyncOrders,
     rechargeRestaurantWallet,
     resetData,
-    simulateDemoOrder,
     toggleOnline,
     walletBalance,
   } = useDelivery();
@@ -50,9 +49,6 @@ export function AppHeader() {
             </Button>
             <Button icon={<FileText className="h-4 w-4" />} onClick={() => setShowReport(true)} variant="secondary">
               Corte
-            </Button>
-            <Button icon={<Play className="h-4 w-4" />} onClick={simulateDemoOrder} variant="secondary">
-              Pedido demo
             </Button>
             <Button
               icon={theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

@@ -1,21 +1,12 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import {
-  assignDriverToOrder,
-  completeDriverDelivery,
-  createOrder,
-  debitWallet,
-  isInsideDriverRadius,
-  rechargeWallet,
-  updateDriverStatus as applyDriverStatus,
-  updateOrderStatus as applyOrderStatus,
-} from '../../domain/useCases';
 import type {
   AppTab,
   Driver,
@@ -26,17 +17,9 @@ import type {
   PlaceOrderInput,
   Restaurant,
 } from '../../domain/entities';
-import {
-  LocalDriverRepository,
-  LocalOrderRepository,
-  LocalRestaurantRepository,
-  StaticLandmarkRepository,
-} from '../../data/repositories';
-import { LocalStorageGateway } from '../../data/storage';
 import { useToast } from '../toast/ToastProvider';
 
-const WALLET_KEY = 'pe_v2_wallet_balance';
-const INITIAL_WALLET_BALANCE = 35;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 interface DeliveryContextValue {
   activeOrder?: Order;
@@ -50,257 +33,168 @@ interface DeliveryContextValue {
   selectedLandmark?: Landmark;
   selectedLandmarkId: string;
   walletBalance: number;
-  assignDriver(orderId: string, driverId: string): void;
-  placeOrder(input: PlaceOrderInput): void;
+  assignDriver(orderId: string, driverId: string): Promise<void>;
+  placeOrder(input: PlaceOrderInput): Promise<void>;
   rechargeRestaurantWallet(amount: number): void;
   resetData(): void;
   selectLandmark(landmarkId: string): void;
   setActiveTab(tab: AppTab): void;
-  simulateDemoOrder(): void;
   toggleOnline(): void;
-  updateDriverStatus(driverId: string, status: DriverStatus): void;
+  updateDriverStatus(driverId: string, status: DriverStatus): Promise<void>;
   updateOrderCommission(orderId: string, commission: number): void;
-  updateOrderStatus(orderId: string, status: OrderStatus): void;
+  updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
+  refreshOrders(): Promise<void>;
 }
 
 const DeliveryContext = createContext<DeliveryContextValue | null>(null);
 
 export function DeliveryProvider({ children }: { children: ReactNode }) {
   const { notify } = useToast();
-  const repositories = useMemo(() => {
-    const storage = new LocalStorageGateway();
-    return {
-      drivers: new LocalDriverRepository(storage),
-      landmarks: new StaticLandmarkRepository(),
-      orders: new LocalOrderRepository(storage),
-      restaurants: new LocalRestaurantRepository(storage),
-      storage,
-    };
-  }, []);
 
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(() =>
-    repositories.restaurants.getRestaurants(),
-  );
-  const [drivers, setDrivers] = useState<Driver[]>(() => repositories.drivers.getDrivers());
-  const [orders, setOrders] = useState<Order[]>(() => repositories.orders.getOrders());
-  const [walletBalance, setWalletBalance] = useState(() =>
-    repositories.storage.get<number>(WALLET_KEY, INITIAL_WALLET_BALANCE),
-  );
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
+  
+  const [walletBalance, setWalletBalance] = useState(35);
   const [isOnline, setIsOnline] = useState(true);
   const [activeTab, setActiveTab] = useState<AppTab>('customer');
-  const [selectedLandmarkId, setSelectedLandmarkId] = useState('l4');
+  const [selectedLandmarkId, setSelectedLandmarkId] = useState('');
 
-  const landmarks = useMemo(() => repositories.landmarks.getLandmarks(), [repositories]);
-  const selectedLandmark = landmarks.find((landmark) => landmark.id === selectedLandmarkId);
+  const selectedLandmark = landmarks.find((l) => String(l.id) === selectedLandmarkId);
   const activeOrder = orders.find((order) => order.status !== 'delivered');
-  const pendingSyncOrders = orders.filter((order) => order.isOfflinePending);
+  const pendingSyncOrders: Order[] = [];
 
-  useEffect(() => repositories.restaurants.saveRestaurants(restaurants), [repositories, restaurants]);
-  useEffect(() => repositories.drivers.saveDrivers(drivers), [drivers, repositories]);
-  useEffect(() => repositories.orders.saveOrders(orders), [orders, repositories]);
-  useEffect(() => repositories.storage.set(WALLET_KEY, walletBalance), [repositories, walletBalance]);
+  const fetchData = useCallback(async () => {
+    try {
+      const [resReq, drvReq, lndReq, ordReq] = await Promise.all([
+        fetch(`${API_URL}/restaurants`),
+        fetch(`${API_URL}/drivers`),
+        fetch(`${API_URL}/landmarks`),
+        fetch(`${API_URL}/orders`)
+      ]);
+      if (resReq.ok) setRestaurants(await resReq.json());
+      if (drvReq.ok) setDrivers(await drvReq.json());
+      if (lndReq.ok) {
+        const l = await lndReq.json();
+        setLandmarks(l);
+        if (l.length > 0 && !l.find((x: any) => String(x.id) === selectedLandmarkId)) {
+          setSelectedLandmarkId(String(l[0].id));
+        }
+      }
+      if (ordReq.ok) setOrders(await ordReq.json());
+    } catch (e) {
+      console.error('Error fetching data', e);
+    }
+  }, [selectedLandmarkId]);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setOrders((currentOrders) => {
-        const nextOrders = currentOrders.map((order) => {
-          if (order.status !== 'picked_up' || order.routeProgress >= 100) return order;
-          return {
-            ...order,
-            routeProgress: Math.min(order.routeProgress + 10, 100),
-          };
-        });
+    fetchData();
+  }, [fetchData]);
 
-        return nextOrders.some((order, index) => order !== currentOrders[index])
-          ? nextOrders
-          : currentOrders;
-      });
-    }, 1200);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  const refreshOrders = async () => {
+    try {
+      const req = await fetch(`${API_URL}/orders`);
+      if (req.ok) setOrders(await req.json());
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const selectLandmark = (landmarkId: string) => setSelectedLandmarkId(landmarkId);
+  const toggleOnline = () => setIsOnline((prev) => !prev);
+  const setActiveTabWrapper = (tab: AppTab) => setActiveTab(tab);
 
-  const toggleOnline = () => {
-    setIsOnline((currentOnline) => {
-      const nextOnline = !currentOnline;
-
-      if (nextOnline) {
-        setOrders((currentOrders) =>
-          currentOrders.map((order) =>
-            order.isOfflinePending
-              ? { ...order, isOfflinePending: false, synchronized: true }
-              : order,
-          ),
-        );
-        notify('Conexión restablecida. Pedidos sincronizados.', 'success');
-      } else {
-        notify('Modo fuera de línea activado. Los cambios se guardarán localmente.', 'warning');
-      }
-
-      return nextOnline;
-    });
-  };
-
-  const placeOrder = (input: PlaceOrderInput) => {
-    const restaurant = restaurants.find((item) => item.id === input.restaurantId);
-    const landmark = landmarks.find((item) => item.id === input.landmarkId);
-
-    if (!restaurant || !landmark) {
-      notify('No se pudo crear el pedido porque faltan datos de ubicación.', 'warning');
-      return;
-    }
-
-    const newOrder = createOrder(input, restaurant, landmark, isOnline);
-    setOrders((currentOrders) => [newOrder, ...currentOrders]);
-    setSelectedLandmarkId(landmark.id);
-    notify(isOnline ? 'Pedido enviado en tiempo real.' : 'Pedido guardado sin conexión.', 'success');
-  };
-
-  const simulateDemoOrder = () => {
-    const restaurant = restaurants[0];
-    const landmark = landmarks.find((item) => item.id === selectedLandmarkId) ?? landmarks[3] ?? landmarks[0];
-
-    if (!restaurant || !landmark || restaurant.menu.length === 0) {
-      notify('No hay datos suficientes para simular un pedido.', 'warning');
-      return;
-    }
-
-    const demoOrder = createOrder(
-      {
-        customerName: 'Denise Turista',
-        customerPhone: '0981234567',
-        deliveryAddress: 'Habitación 203, referencia principal del hospedaje',
-        items: [
-          { item: restaurant.menu[0], quantity: 1 },
-          ...(restaurant.menu[2] ? [{ item: restaurant.menu[2], quantity: 2 }] : []),
-        ],
-        landmarkId: landmark.id,
-        restaurantId: restaurant.id,
-        restaurantName: restaurant.name,
-      },
-      restaurant,
-      landmark,
-      isOnline,
-    );
-
-    setOrders((currentOrders) => [demoOrder, ...currentOrders]);
-    setSelectedLandmarkId(landmark.id);
-    setActiveTab('restaurant');
-    notify('Pedido demo creado. Continúa el flujo desde Restaurante.', 'success');
-  };
-
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    const targetOrder = orders.find((order) => order.id === orderId);
-    if (!targetOrder) return;
-
-    const updatedOrder = applyOrderStatus(targetOrder, status, isOnline);
-    setOrders((currentOrders) =>
-      currentOrders.map((order) => (order.id === orderId ? updatedOrder : order)),
-    );
-
-    if (status === 'picked_up' && targetOrder.driverId) {
-      setDrivers((currentDrivers) =>
-        currentDrivers.map((driver) =>
-          driver.id === targetOrder.driverId ? applyDriverStatus(driver, 'delivering') : driver,
-        ),
-      );
-    }
-
-    if (status === 'delivered' && targetOrder.driverId) {
-      setDrivers((currentDrivers) =>
-        currentDrivers.map((driver) =>
-          driver.id === targetOrder.driverId
-            ? completeDriverDelivery(driver, targetOrder.commission)
-            : driver,
-        ),
-      );
-    }
-
-    notify(
-      isOnline
-        ? `Pedido actualizado a ${status.replaceAll('_', ' ')}.`
-        : 'Estado guardado en modo fuera de línea.',
-      status === 'delivered' ? 'success' : 'info',
-    );
-  };
-
-  const assignDriver = (orderId: string, driverId: string) => {
-    const targetOrder = orders.find((order) => order.id === orderId);
-    const driver = drivers.find((item) => item.id === driverId);
-    const restaurant = restaurants.find((item) => item.id === targetOrder?.restaurantId);
-
-    if (!targetOrder || !driver || !restaurant) return;
-
-    if (driver.status !== 'active') {
-      notify('El repartidor no está disponible.', 'warning');
-      return;
-    }
-
-    if (!isInsideDriverRadius(driver, restaurant)) {
-      notify('El repartidor está fuera del radio operativo de 5 km.', 'warning');
-      return;
-    }
-
+  const placeOrder = async (input: PlaceOrderInput) => {
     try {
-      const nextWalletBalance = debitWallet(walletBalance, targetOrder.commission);
-      setWalletBalance(nextWalletBalance);
-      setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          order.id === orderId ? assignDriverToOrder(order, driver, isOnline) : order,
-        ),
-      );
-      setDrivers((currentDrivers) =>
-        currentDrivers.map((item) =>
-          item.id === driver.id ? applyDriverStatus(item, 'delivering') : item,
-        ),
-      );
-      notify(`Comisión de $${targetOrder.commission.toFixed(2)} debitada de la billetera.`, 'info');
-    } catch (error) {
-      notify(error instanceof Error ? error.message : 'No se pudo asignar el repartidor.', 'warning');
+      const res = await fetch(`${API_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId: input.restaurantId,
+          restaurantName: input.restaurantName,
+          customerName: input.customerName,
+          customerPhone: input.customerPhone,
+          items: input.items,
+          deliveryAddress: input.deliveryAddress,
+          deliveryLandmarkId: input.landmarkId,
+          total: input.items.reduce((acc, curr) => acc + curr.item.price * curr.quantity, 0),
+          foodTotal: input.items.reduce((acc, curr) => acc + curr.item.price * curr.quantity, 0),
+          commission: 0,
+          distanceKm: 2.5
+        }),
+      });
+      if (res.ok) {
+        notify('Pedido enviado correctamente.', 'success');
+        refreshOrders();
+      } else {
+        notify('Error al crear pedido.', 'warning');
+      }
+    } catch (e) {
+      notify('Error de red al crear pedido.', 'warning');
     }
   };
 
-  const updateDriverStatus = (driverId: string, status: DriverStatus) => {
-    setDrivers((currentDrivers) =>
-      currentDrivers.map((driver) =>
-        driver.id === driverId ? applyDriverStatus(driver, status) : driver,
-      ),
-    );
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        notify(`Pedido actualizado a ${status}.`, 'success');
+        refreshOrders();
+      }
+    } catch (e) {
+      notify('Error al actualizar estado.', 'warning');
+    }
+  };
+
+  const assignDriver = async (orderId: string, driverId: string) => {
+    const driver = drivers.find(d => String(d.id) === driverId);
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/assign-driver`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, driverName: driver?.name })
+      });
+      if (res.ok) {
+        notify('Repartidor asignado con éxito.', 'success');
+        refreshOrders();
+      }
+    } catch (e) {
+      notify('Error al asignar repartidor.', 'warning');
+    }
+  };
+
+  const updateDriverStatus = async (driverId: string, status: DriverStatus) => {
+    try {
+      const res = await fetch(`${API_URL}/drivers/${driverId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setDrivers(prev => prev.map(d => String(d.id) === driverId ? updated : d));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const updateOrderCommission = (orderId: string, commission: number) => {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              commission,
-              total: Number((order.foodTotal + commission).toFixed(2)),
-              synchronized: isOnline,
-              isOfflinePending: !isOnline,
-            }
-          : order,
-      ),
-    );
-    notify(`Comisión actualizada a $${commission.toFixed(2)}.`, 'success');
+    notify('Función no implementada en el backend aún', 'info');
   };
 
   const rechargeRestaurantWallet = (amount: number) => {
-    setWalletBalance((currentBalance) => rechargeWallet(currentBalance, amount));
+    setWalletBalance((prev) => prev + amount);
     notify(`Billetera recargada con $${amount.toFixed(2)}.`, 'success');
   };
 
   const resetData = () => {
-    setRestaurants(repositories.restaurants.resetRestaurants());
-    setDrivers(repositories.drivers.resetDrivers());
-    setOrders(repositories.orders.resetOrders());
-    setWalletBalance(INITIAL_WALLET_BALANCE);
-    setIsOnline(true);
-    setActiveTab('customer');
-    setSelectedLandmarkId('l4');
-    notify('Datos restaurados a los valores iniciales.', 'info');
+    notify('Reset data no está disponible en modo backend real', 'info');
   };
 
   const value = useMemo(
@@ -320,13 +214,12 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       selectLandmark,
       selectedLandmark,
       selectedLandmarkId,
-      setActiveTab,
-      simulateDemoOrder,
+      setActiveTab: setActiveTabWrapper,
       toggleOnline,
       updateDriverStatus,
       updateOrderCommission,
       updateOrderStatus,
-      walletBalance,
+      refreshOrders,
     }),
     [
       activeOrder,
@@ -351,6 +244,5 @@ export function useDelivery() {
   if (!context) {
     throw new Error('useDelivery debe usarse dentro de DeliveryProvider');
   }
-
   return context;
 }
