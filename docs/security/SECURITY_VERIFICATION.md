@@ -78,4 +78,4 @@ APP_ORIGIN=https://app.example.com
 JWT_SECURE_COOKIE=true
 ```
 
-Después valida TLS con la herramienta corporativa elegida y restringe la clave de Google Maps al dominio real.
+Después valida TLS con la herramienta corporativa elegida. Verifica también que la atribución de OpenStreetMap siga visible y que la CSP solo permita teselas desde `tile.openstreetmap.org`.

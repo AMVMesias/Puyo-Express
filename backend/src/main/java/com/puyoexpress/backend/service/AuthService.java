@@ -4,7 +4,10 @@ import com.puyoexpress.backend.dto.AuthResponse;
 import com.puyoexpress.backend.dto.LoginRequest;
 import com.puyoexpress.backend.dto.RegisterRequest;
 import com.puyoexpress.backend.model.ERole;
+import com.puyoexpress.backend.model.Coordinates;
+import com.puyoexpress.backend.model.Driver;
 import com.puyoexpress.backend.model.User;
+import com.puyoexpress.backend.repository.DriverRepository;
 import com.puyoexpress.backend.repository.UserRepository;
 import com.puyoexpress.backend.security.JwtUtils;
 import com.puyoexpress.backend.security.UserDetailsImpl;
@@ -25,15 +28,18 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final DriverRepository driverRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
     public AuthService(AuthenticationManager authenticationManager,
                        UserRepository userRepository,
+                       DriverRepository driverRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtils jwtUtils) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
+        this.driverRepository = driverRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
     }
@@ -90,15 +96,15 @@ public class AuthService {
                 normalizedRole = "ROLE_" + normalizedRole;
             }
             role = ERole.valueOf(normalizedRole);
-            if (role != ERole.ROLE_CUSTOMER) {
-                throw new IllegalArgumentException("El registro público solo permite cuentas de cliente.");
+            if (role != ERole.ROLE_CUSTOMER && role != ERole.ROLE_DRIVER) {
+                throw new IllegalArgumentException("El registro público solo permite cuentas de cliente o repartidor.");
             }
         } catch (IllegalArgumentException e) {
-            if ("El registro público solo permite cuentas de cliente.".equals(e.getMessage())) {
+            if (e.getMessage() != null && e.getMessage().startsWith("El registro público solo permite")) {
                 throw e;
             }
             throw new IllegalArgumentException(
-                    "Rol inválido. Usa CUSTOMER."
+                    "Rol inválido. Usa CUSTOMER o DRIVER."
             );
         }
 
@@ -110,6 +116,20 @@ public class AuthService {
         );
 
         User savedUser = userRepository.save(user);
+
+        if (role == ERole.ROLE_DRIVER) {
+            Driver driver = new Driver();
+            driver.setUser(savedUser);
+            driver.setName(savedUser.getUsername());
+            driver.setZone("Puyo");
+            driver.setVehicle("moto");
+            driver.setRating(5.0);
+            driver.setStatus("offline");
+            driver.setTotalEarnings(0.0);
+            driver.setCompletedDeliveries(0);
+            driver.setPosition(new Coordinates(-1.488333, -77.994444));
+            driverRepository.save(driver);
+        }
 
         return new AuthResponse(
                 savedUser.getId(),

@@ -30,7 +30,7 @@ El navegador no accede directamente al backend ni a PostgreSQL. Nginx sirve el f
 3. El backend emite un JWT firmado en una cookie HttpOnly, SameSite=Lax.
 4. Cada solicitud autenticada reconstruye la identidad y sus autoridades.
 5. Los controladores aplican roles `CUSTOMER`, `RESTAURANT` y `DRIVER`, además de validar las transiciones de estado de los pedidos.
-6. El registro público solo permite crear clientes; roles operativos no pueden autoasignarse desde el navegador.
+6. El registro público permite clientes y repartidores. Cada repartidor obtiene un perfil operativo asociado a su usuario; el rol restaurante no puede autoasignarse.
 
 La cookie usa `Secure=false` únicamente en el entorno HTTP local. En producción debe existir TLS y `JWT_SECURE_COOKIE=true`.
 
@@ -53,4 +53,3 @@ Los contenedores de aplicación ejecutan usuarios no root, filesystem de solo le
 ## Registro de seguridad
 
 `SECURITY_AUDIT` registra autenticación, registro, cierre de sesión y solicitudes con método, ruta, estado, actor, IP de origen, identificador y duración. Se excluyen cuerpos, contraseñas, JWT, teléfonos y direcciones. Hoy los eventos viven en stdout de Docker; aún no existe un colector central inmutable.
-

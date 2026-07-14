@@ -1,7 +1,7 @@
-import { Lock, MapPinned, Route, ShieldCheck, Store, Truck, UserPlus } from 'lucide-react';
+import { ShoppingBag, Truck, UserPlus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import loginHero from '../../../assets/puyo-express-login-hero.png';
-import { useAuth } from '../../application/auth/AuthProvider';
+import { useAuth, type PublicRegistrationRole } from '../../application/auth/AuthProvider';
 import { useToast } from '../../application/toast/ToastProvider';
 import { Button } from '../components/atoms/Button';
 import { Card } from '../components/atoms/Card';
@@ -14,6 +14,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<PublicRegistrationRole>('CUSTOMER');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -21,7 +22,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
     setIsSubmitting(true);
 
     try {
-      const result = await register(username, email, password);
+      const result = await register(username.trim(), email.trim(), password, role);
 
       if (result.success) {
         notify('Registro exitoso. Ahora puedes iniciar sesión.', 'success');
@@ -58,11 +59,44 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
                 Únete a Puyo Express y empieza a gestionar pedidos.
               </p>
             </div>
+
+            <fieldset>
+              <legend className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Tipo de cuenta
+              </legend>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-bold transition ${
+                    role === 'CUSTOMER'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-100'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+                  }`}
+                  onClick={() => setRole('CUSTOMER')}
+                  type="button"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Cliente
+                </button>
+                <button
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-bold transition ${
+                    role === 'DRIVER'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-100'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+                  }`}
+                  onClick={() => setRole('DRIVER')}
+                  type="button"
+                >
+                  <Truck className="h-4 w-4" />
+                  Repartidor
+                </button>
+              </div>
+            </fieldset>
             
             <Input
               label="Nombre de usuario"
               onChange={(event) => setUsername(event.target.value)}
               required
+              autoComplete="username"
               minLength={3}
               maxLength={50}
               type="text"
@@ -72,6 +106,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               label="Correo electrónico"
               onChange={(event) => setEmail(event.target.value)}
               required
+              autoComplete="email"
               type="email"
               value={email}
             />
@@ -79,6 +114,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               label="Contraseña"
               onChange={(event) => setPassword(event.target.value)}
               required
+              autoComplete="new-password"
               minLength={8}
               type="password"
               value={password}
@@ -90,7 +126,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Registrando...' : 'Registrarse'}
+              {isSubmitting ? 'Registrando...' : `Crear cuenta de ${role === 'DRIVER' ? 'repartidor' : 'cliente'}`}
             </Button>
             
             <div className="mt-4 text-center">

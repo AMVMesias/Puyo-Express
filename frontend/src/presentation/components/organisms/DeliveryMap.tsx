@@ -1,258 +1,36 @@
 import { ExternalLink, LocateFixed, MapPin, Navigation, Store } from 'lucide-react';
+import L, { type Layer, type Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-const PUYO_CENTER = { lat: -1.488333, lng: -77.994444 };
-import type { Coordinates, Landmark, Order, Restaurant } from '../../../domain/entities';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
-import { Card } from '../atoms/Card';
+import type { Coordinates } from '../../../domain/entities';
 import { Badge } from '../atoms/Badge';
+import { Card } from '../atoms/Card';
 
-type GoogleMarker = {
-  setMap(map: GoogleMap | null): void;
-};
+const PUYO_CENTER: Coordinates = { lat: -1.488333, lng: -77.994444 };
+const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-type GooglePolyline = {
-  setMap(map: GoogleMap | null): void;
-};
-
-type GoogleMap = {
-  setCenter(position: Coordinates): void;
-};
-
-type GoogleDirectionsRenderer = {
-  setDirections(result: unknown): void;
-  setMap(map: GoogleMap | null): void;
-};
-
-type GoogleDirectionsService = {
-  route(
-    request: {
-      destination: Coordinates;
-      origin: Coordinates;
-      travelMode: string;
-    },
-    callback: (result: unknown, status: string) => void,
-  ): void;
-};
-
-type GoogleMapsApi = {
-  maps: {
-    DirectionsRenderer: new (options: { map: GoogleMap; suppressMarkers: boolean }) => GoogleDirectionsRenderer;
-    DirectionsService: new () => GoogleDirectionsService;
-    Map: new (
-      element: HTMLElement,
-      options: {
-        center: Coordinates;
-        disableDefaultUI: boolean;
-        mapTypeControl: boolean;
-        streetViewControl: boolean;
-        styles: Array<Record<string, unknown>>;
-        zoom: number;
-      },
-    ) => GoogleMap;
-    Marker: new (options: {
-      icon?: string;
-      label?: string;
-      map: GoogleMap;
-      position: Coordinates;
-      title: string;
-    }) => GoogleMarker;
-    Polyline: new (options: {
-      geodesic: boolean;
-      map: GoogleMap;
-      path: Coordinates[];
-      strokeColor: string;
-      strokeOpacity: number;
-      strokeWeight: number;
-    }) => GooglePolyline;
-    TravelMode: {
-      DRIVING: string;
-    };
-  };
-};
-
-declare global {
-  interface Window {
-    google?: GoogleMapsApi;
-    gm_authFailure?: () => void;
-    puyoExpressGoogleMapsReady?: () => void;
+function openStreetMapUrl(origin: Coordinates, destination?: Coordinates) {
+  if (!destination) {
+    return `https://www.openstreetmap.org/#map=13/${PUYO_CENTER.lat}/${PUYO_CENTER.lng}`;
   }
-}
 
-const GOOGLE_MAPS_SCRIPT_ID = 'puyo-express-google-maps';
-
-function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
-  if (window.google) return Promise.resolve(window.google);
-
-  return new Promise((resolve, reject) => {
-    const timeoutId = window.setTimeout(
-      () => reject(new Error('Google Maps tardó demasiado en responder')),
-      15000,
-    );
-    const resolveLoadedApi = () => {
-      window.clearTimeout(timeoutId);
-      if (window.google) resolve(window.google);
-      else reject(new Error('Google Maps no se cargó correctamente'));
-    };
-
-    const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
-    if (existingScript) {
-      window.puyoExpressGoogleMapsReady = resolveLoadedApi;
-      return;
-    }
-
-    window.puyoExpressGoogleMapsReady = resolveLoadedApi;
-
-    const script = document.createElement('script');
-    script.id = GOOGLE_MAPS_SCRIPT_ID;
-    script.async = true;
-    script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
-      apiKey,
-    )}&callback=puyoExpressGoogleMapsReady&loading=async`;
-    script.onerror = () => {
-      window.clearTimeout(timeoutId);
-      reject(new Error('No se pudo cargar Google Maps'));
-    };
-    document.head.appendChild(script);
+  const params = new URLSearchParams({
+    engine: 'fossgis_osrm_car',
+    route: `${origin.lat},${origin.lng};${destination.lat},${destination.lng}`,
   });
+  return `https://www.openstreetmap.org/directions?${params.toString()}`;
 }
 
-function googleMapsDirectionsUrl(origin: Coordinates, destination: Coordinates) {
-  const originParam = `${origin.lat},${origin.lng}`;
-  const destinationParam = `${destination.lat},${destination.lng}`;
-  return `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}&travelmode=driving`;
-}
+function markerIcon(symbol: string, background: string, selected = false) {
+  const ring = selected ? 'box-shadow:0 0 0 5px rgba(16,185,129,.25),0 3px 8px rgba(15,23,42,.28);' : 'box-shadow:0 3px 8px rgba(15,23,42,.24);';
 
-const MAP_BOUNDS = {
-  north: -1.46,
-  south: -1.525,
-  east: -77.96,
-  west: -78.025,
-};
-
-function projectToMap(position: Coordinates) {
-  const x = ((position.lng - MAP_BOUNDS.west) / (MAP_BOUNDS.east - MAP_BOUNDS.west)) * 100;
-  const y = ((MAP_BOUNDS.north - position.lat) / (MAP_BOUNDS.north - MAP_BOUNDS.south)) * 100;
-
-  return {
-    x: Math.min(96, Math.max(4, x)),
-    y: Math.min(96, Math.max(4, y)),
-  };
-}
-
-function LocalFallbackMap({
-  activeOrder,
-  activeRestaurant,
-  landmarks,
-  restaurants,
-  selectLandmark,
-  selectedLandmarkId,
-}: {
-  activeOrder?: Order;
-  activeRestaurant?: Restaurant;
-  landmarks: Landmark[];
-  restaurants: Restaurant[];
-  selectLandmark: (landmarkId: number) => void;
-  selectedLandmarkId: number | null;
-}) {
-  const origin = activeRestaurant?.position ?? restaurants[0]?.position;
-  const destination = activeOrder?.destination;
-  const originPoint = origin ? projectToMap(origin) : null;
-  const destinationPoint = destination ? projectToMap(destination) : null;
-  const riderPoint =
-    originPoint && destinationPoint && activeOrder?.status === 'picked_up'
-      ? {
-          x: originPoint.x + (destinationPoint.x - originPoint.x) * (activeOrder.routeProgress / 100),
-          y: originPoint.y + (destinationPoint.y - originPoint.y) * (activeOrder.routeProgress / 100),
-        }
-      : null;
-
-  return (
-    <div className="absolute inset-0 overflow-hidden bg-[#e8f3ec]">
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,.06)_1px,transparent_1px),linear-gradient(0deg,rgba(15,23,42,.06)_1px,transparent_1px)] bg-[size:36px_36px]" />
-      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-        <path
-          d="M 77 -8 C 72 12 66 24 68 38 C 72 60 86 70 81 108"
-          fill="none"
-          stroke="#38bdf8"
-          strokeLinecap="round"
-          strokeWidth="5"
-        />
-        <path d="M -5 74 C 22 68 36 70 54 58 C 70 48 82 55 105 62" fill="none" stroke="#cbd5e1" strokeWidth="3" />
-        <path d="M 12 36 L 76 36" fill="none" stroke="#d7dee8" strokeWidth="2.5" />
-        <path d="M 45 -5 C 47 20 45 45 48 105" fill="none" stroke="#d7dee8" strokeWidth="2.5" />
-        <path d="M 8 18 C 22 9 37 12 52 18 C 66 24 84 18 98 10 L 105 -5 L -5 -5 Z" fill="#bbf7d0" opacity=".45" />
-        <path d="M -5 98 C 18 84 35 90 52 86 C 68 82 82 88 105 78 L 105 105 L -5 105 Z" fill="#bbf7d0" opacity=".48" />
-
-        {originPoint && destinationPoint && (
-          <line
-            stroke="#059669"
-            strokeDasharray="3 3"
-            strokeLinecap="round"
-            strokeWidth="1.7"
-            x1={originPoint.x}
-            x2={destinationPoint.x}
-            y1={originPoint.y}
-            y2={destinationPoint.y}
-          />
-        )}
-      </svg>
-
-      {restaurants.map((restaurant) => {
-        const point = projectToMap(restaurant.position);
-        const isActive = activeOrder?.restaurantId === restaurant.id;
-
-        return (
-          <div
-            key={restaurant.id}
-            className={`absolute z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg border-2 border-white text-lg shadow-md ${
-              isActive ? 'bg-emerald-600 text-white ring-4 ring-emerald-300/40' : 'bg-orange-500 text-white'
-            }`}
-            style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            title={restaurant.name}
-          >
-            {restaurant.logo}
-          </div>
-        );
-      })}
-
-      {landmarks.map((landmark) => {
-        const point = projectToMap(landmark.position);
-        const isSelected = selectedLandmarkId === landmark.id;
-        const isDestination = activeOrder?.deliveryLandmarkId === landmark.id;
-
-        return (
-          <button
-            key={landmark.id}
-            className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white p-1.5 shadow-md transition hover:scale-110 ${
-              isDestination ? 'bg-red-500 text-white' : isSelected ? 'bg-amber-400 text-amber-950' : 'bg-white text-emerald-700'
-            }`}
-            onClick={() => selectLandmark(landmark.id)}
-            style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            title={landmark.name}
-            type="button"
-          >
-            <MapPin className="h-4 w-4" />
-          </button>
-        );
-      })}
-
-      {riderPoint && (
-        <div
-          className="absolute z-40 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-emerald-600 px-2 py-1 text-lg text-white shadow-lg transition-all duration-300"
-          style={{ left: `${riderPoint.x}%`, top: `${riderPoint.y}%` }}
-          title="Repartidor en ruta"
-        >
-          🏍️
-        </div>
-      )}
-
-      <div className="absolute left-3 top-3 z-40 rounded-lg border border-white/70 bg-white/90 p-3 text-xs text-slate-600 shadow-sm backdrop-blur">
-        <p className="font-bold text-slate-900">Mapa de Puyo</p>
-        <p>Vista local basada en las coordenadas registradas.</p>
-      </div>
-    </div>
-  );
+  return L.divIcon({
+    className: '',
+    html: `<div aria-hidden="true" style="align-items:center;background:${background};border:2px solid white;border-radius:9999px;color:white;display:flex;font-size:17px;height:36px;justify-content:center;${ring}width:36px">${symbol}</div>`,
+    iconAnchor: [18, 18],
+    iconSize: [36, 36],
+  });
 }
 
 export function DeliveryMap() {
@@ -265,11 +43,9 @@ export function DeliveryMap() {
     selectedLandmarkId,
   } = useDelivery();
   const mapElementRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<GoogleMap | null>(null);
-  const markersRef = useRef<GoogleMarker[]>([]);
-  const routeRef = useRef<GooglePolyline | GoogleDirectionsRenderer | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapRef = useRef<LeafletMap | null>(null);
+  const overlaysRef = useRef<Layer[]>([]);
+  const [tileError, setTileError] = useState(false);
 
   const activeRestaurant = useMemo(
     () => restaurants.find((restaurant) => restaurant.id === activeOrder?.restaurantId),
@@ -277,134 +53,106 @@ export function DeliveryMap() {
   );
 
   const routeOrigin = activeRestaurant?.position ?? restaurants[0]?.position ?? PUYO_CENTER;
-  const routeDestination = activeOrder?.destination ?? selectedLandmark?.position ?? PUYO_CENTER;
+  const routeDestination = activeOrder?.destination ?? selectedLandmark?.position;
+  const directionsUrl = openStreetMapUrl(routeOrigin, routeDestination);
 
   useEffect(() => {
-    if (!apiKey || !mapElementRef.current) return;
+    const element = mapElementRef.current;
+    if (!element || mapRef.current) return;
 
-    let cancelled = false;
-    const previousAuthFailure = window.gm_authFailure;
-    const handleAuthFailure = () => {
-      if (!cancelled) {
-        setMapError(
-          'Google Maps rechazó la clave. Revisa que Maps JavaScript API y la facturación estén activas y que el dominio actual esté autorizado',
-        );
-      }
-    };
-    window.gm_authFailure = handleAuthFailure;
-    const mapElement = mapElementRef.current;
-    const errorObserver = new MutationObserver(() => {
-      if (mapElement.querySelector('.gm-err-container, .gm-err-message')) {
-        handleAuthFailure();
-      }
+    const map = L.map(element, {
+      attributionControl: true,
+      minZoom: 11,
+      zoomControl: true,
+    }).setView([PUYO_CENTER.lat, PUYO_CENTER.lng], 13);
+
+    const tileLayer = L.tileLayer(OSM_TILE_URL, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
     });
-    errorObserver.observe(mapElement, { childList: true, subtree: true });
+    tileLayer.on('tileerror', () => setTileError(true));
+    tileLayer.on('load', () => setTileError(false));
+    tileLayer.addTo(map);
+    mapRef.current = map;
 
-    loadGoogleMaps(apiKey)
-      .then((googleApi) => {
-        if (cancelled || !mapElementRef.current) return;
-
-        if (!mapRef.current) {
-          mapRef.current = new googleApi.maps.Map(mapElementRef.current, {
-            center: PUYO_CENTER,
-            disableDefaultUI: false,
-            mapTypeControl: false,
-            streetViewControl: false,
-            styles: [
-              { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-              { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
-            ],
-            zoom: 13,
-          });
-        }
-
-        const map = mapRef.current;
-        markersRef.current.forEach((marker) => marker.setMap(null));
-        markersRef.current = [];
-        routeRef.current?.setMap(null);
-        routeRef.current = null;
-
-        restaurants.forEach((restaurant) => {
-          markersRef.current.push(
-            new googleApi.maps.Marker({
-              label: restaurant.logo,
-              map,
-              position: restaurant.position,
-              title: restaurant.name,
-            }),
-          );
-        });
-
-        landmarks.forEach((landmark) => {
-          const marker = new googleApi.maps.Marker({
-            icon:
-              landmark.id === selectedLandmarkId
-                ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
-                : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-            map,
-            position: landmark.position,
-            title: landmark.name,
-          });
-
-          const clickableMarker = marker as GoogleMarker & { addListener?: (event: string, handler: () => void) => void };
-          clickableMarker.addListener?.('click', () => selectLandmark(landmark.id));
-          markersRef.current.push(marker);
-        });
-
-        if (activeOrder && activeRestaurant) {
-          const renderer = new googleApi.maps.DirectionsRenderer({ map, suppressMarkers: true });
-          const service = new googleApi.maps.DirectionsService();
-          service.route(
-            {
-              destination: activeOrder.destination,
-              origin: activeRestaurant.position,
-              travelMode: googleApi.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-              if (status === 'OK') {
-                renderer.setDirections(result);
-                routeRef.current = renderer;
-                return;
-              }
-
-              renderer.setMap(null);
-              routeRef.current = new googleApi.maps.Polyline({
-                geodesic: true,
-                map,
-                path: [activeRestaurant.position, activeOrder.destination],
-                strokeColor: '#059669',
-                strokeOpacity: 0.9,
-                strokeWeight: 4,
-              });
-            },
-          );
-        } else {
-          map.setCenter(selectedLandmark?.position ?? PUYO_CENTER);
-        }
-      })
-      .catch((error: unknown) => {
-        setMapError(error instanceof Error ? error.message : 'No se pudo inicializar el mapa.');
-      });
+    const resizeTimer = window.setTimeout(() => map.invalidateSize(), 0);
 
     return () => {
-      cancelled = true;
-      errorObserver.disconnect();
-      if (window.gm_authFailure === handleAuthFailure) {
-        window.gm_authFailure = previousAuthFailure;
-      }
+      window.clearTimeout(resizeTimer);
+      overlaysRef.current = [];
+      mapRef.current = null;
+      map.remove();
     };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    overlaysRef.current.forEach((layer) => layer.removeFrom(map));
+    overlaysRef.current = [];
+
+    restaurants.forEach((restaurant) => {
+      const isActive = activeOrder?.restaurantId === restaurant.id;
+      const marker = L.marker([restaurant.position.lat, restaurant.position.lng], {
+        icon: markerIcon('🍽️', isActive ? '#059669' : '#f97316', isActive),
+        keyboard: true,
+        title: restaurant.name,
+      }).addTo(map);
+      overlaysRef.current.push(marker);
+    });
+
+    landmarks.forEach((landmark) => {
+      const isSelected = landmark.id === selectedLandmarkId;
+      const isDestination = landmark.id === activeOrder?.deliveryLandmarkId;
+      const marker = L.marker([landmark.position.lat, landmark.position.lng], {
+        icon: markerIcon('●', isDestination ? '#ef4444' : isSelected ? '#10b981' : '#0f766e', isSelected || isDestination),
+        keyboard: true,
+        title: landmark.name,
+      }).addTo(map);
+      marker.on('click', () => selectLandmark(landmark.id));
+      overlaysRef.current.push(marker);
+    });
+
+    if (routeDestination) {
+      const route = L.polyline(
+        [
+          [routeOrigin.lat, routeOrigin.lng],
+          [routeDestination.lat, routeDestination.lng],
+        ],
+        {
+          color: '#059669',
+          dashArray: activeOrder ? undefined : '8 8',
+          opacity: 0.9,
+          weight: 5,
+        },
+      ).addTo(map);
+      overlaysRef.current.push(route);
+
+      if (activeOrder?.status === 'picked_up') {
+        const progress = Math.min(1, Math.max(0, activeOrder.routeProgress / 100));
+        const riderPosition: Coordinates = {
+          lat: routeOrigin.lat + (routeDestination.lat - routeOrigin.lat) * progress,
+          lng: routeOrigin.lng + (routeDestination.lng - routeOrigin.lng) * progress,
+        };
+        const rider = L.marker([riderPosition.lat, riderPosition.lng], {
+          icon: markerIcon('🏍️', '#047857', true),
+          title: 'Repartidor en ruta',
+        }).addTo(map);
+        overlaysRef.current.push(rider);
+      }
+
+      map.fitBounds(route.getBounds(), { maxZoom: 15, padding: [55, 55] });
+    }
   }, [
     activeOrder,
-    activeRestaurant,
-    apiKey,
     landmarks,
     restaurants,
+    routeDestination,
+    routeOrigin,
     selectLandmark,
-    selectedLandmark,
     selectedLandmarkId,
   ]);
-
-  const directionsUrl = googleMapsDirectionsUrl(routeOrigin, routeDestination);
 
   return (
     <Card className="overflow-hidden">
@@ -415,41 +163,18 @@ export function DeliveryMap() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900">Mapa de entregas en Puyo</h2>
-            <p className="text-xs text-slate-500">Google Maps con restaurantes, destinos y ruta activa.</p>
+            <p className="text-xs text-slate-500">OpenStreetMap con restaurantes, destinos y ruta activa.</p>
           </div>
         </div>
         {activeOrder ? <Badge tone="emerald">Pedido #{String(activeOrder.id).padStart(6, '0')}</Badge> : <Badge>Sin pedido activo</Badge>}
       </header>
 
-      <div className="relative min-h-[420px] bg-slate-100">
-        {apiKey ? (
-          <>
-            <div ref={mapElementRef} className="absolute inset-0" />
-            {mapError && (
-              <LocalFallbackMap
-                activeOrder={activeOrder}
-                activeRestaurant={activeRestaurant}
-                landmarks={landmarks}
-                restaurants={restaurants}
-                selectLandmark={selectLandmark}
-                selectedLandmarkId={selectedLandmarkId}
-              />
-            )}
-            {mapError && (
-              <div className="absolute inset-x-4 top-4 z-50 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 shadow-sm">
-                {mapError}. Mostrando la vista local de respaldo.
-              </div>
-            )}
-          </>
-        ) : (
-          <LocalFallbackMap
-            activeOrder={activeOrder}
-            activeRestaurant={activeRestaurant}
-            landmarks={landmarks}
-            restaurants={restaurants}
-            selectLandmark={selectLandmark}
-            selectedLandmarkId={selectedLandmarkId}
-          />
+      <div className="relative min-h-[420px] bg-[#e8f3ec]">
+        <div ref={mapElementRef} className="absolute inset-0 z-0" aria-label="Mapa interactivo de Puyo" />
+        {tileError && (
+          <div className="absolute inset-x-4 top-4 z-[500] rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 shadow-sm">
+            No se pudieron descargar algunas calles. Los destinos registrados continúan disponibles en el mapa.
+          </div>
         )}
       </div>
 
@@ -479,9 +204,14 @@ export function DeliveryMap() {
             <Navigation className="h-4 w-4 text-emerald-600" />
             {activeOrder?.deliveryLandmark ?? selectedLandmark?.name ?? 'Destino pendiente'}
           </span>
-          <a className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800" href={directionsUrl} target="_blank" rel="noreferrer">
+          <a
+            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800"
+            href={directionsUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
             <ExternalLink className="h-3 w-3" />
-            Google Maps
+            OpenStreetMap
           </a>
         </div>
       </footer>

@@ -1,18 +1,17 @@
 import { Award, Bike, CheckCircle2, MapPin, Navigation, Power, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { useAuth } from '../../../application/auth/AuthProvider';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
 import { Card } from '../atoms/Card';
-import { Select } from '../atoms/Field';
 import { EmptyState } from '../molecules/EmptyState';
 import { MetricTile } from '../molecules/MetricTile';
 import { OrderStatusBadge } from '../molecules/OrderStatusBadge';
 
 export function DriverDashboard() {
+  const { user } = useAuth();
   const { assignDriver, drivers, orders, updateDriverStatus, updateOrderStatus } = useDelivery();
-  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
-  const currentDriver = drivers.find((driver) => driver.id === selectedDriverId) ?? drivers[0];
+  const currentDriver = drivers.find((driver) => driver.userId === user?.id);
   const myActiveOrder = orders.find(
     (order) => order.driverId === currentDriver?.id && order.status !== 'delivered',
   );
@@ -28,6 +27,14 @@ export function DriverDashboard() {
     updateDriverStatus(currentDriver.id, currentDriver.status === 'offline' ? 'active' : 'offline');
   };
 
+  if (!currentDriver) {
+    return (
+      <EmptyState icon={<Bike className="h-6 w-6" />} title="Perfil de repartidor no disponible">
+        Tu cuenta no tiene un perfil operativo asociado. Cierra sesión y vuelve a entrar; si continúa, contacta al administrador.
+      </EmptyState>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -37,13 +44,9 @@ export function DriverDashboard() {
               {currentDriver?.vehicle === 'bici' ? '🚲' : '🏍️'}
             </span>
             <div className="min-w-0 flex-1">
-              <Select label="Identidad del repartidor" onChange={(event) => setSelectedDriverId(Number(event.target.value))} value={currentDriver?.id ?? ''}>
-                {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.name} - {driver.vehicle === 'moto' ? 'Moto' : 'Bici'}
-                  </option>
-                ))}
-              </Select>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Perfil del repartidor</p>
+              <p className="mt-1 font-black text-slate-900">{currentDriver.name}</p>
+              <p className="text-sm text-slate-500">{currentDriver.vehicle === 'moto' ? 'Moto' : 'Bicicleta'} · {currentDriver.zone}</p>
             </div>
           </div>
           <Button

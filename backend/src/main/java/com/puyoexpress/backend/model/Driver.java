@@ -1,5 +1,7 @@
 package com.puyoexpress.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.puyoexpress.backend.security.SensitiveStringConverter;
 import jakarta.persistence.*;
 
@@ -9,6 +11,11 @@ public class Driver {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", unique = true)
+    @JsonIgnore
+    private User user;
 
     private String name;
     @Column(length = 512)
@@ -32,6 +39,12 @@ public class Driver {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    @JsonProperty("userId")
+    public Long getUserId() { return user == null ? null : user.getId(); }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

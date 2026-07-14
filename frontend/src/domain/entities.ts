@@ -39,6 +39,7 @@ export interface Restaurant {
 
 export interface Driver {
   id: number;
+  userId?: number;
   name: string;
   phone: string;
   zone: string;

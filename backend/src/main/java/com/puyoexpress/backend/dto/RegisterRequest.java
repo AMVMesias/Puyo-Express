@@ -23,6 +23,7 @@ public class RegisterRequest {
     private String password;
 
     @NotBlank(message = "El rol es obligatorio")
+    @Size(max = 20, message = "El rol no es válido")
     private String role;
 
     public RegisterRequest() {

@@ -8,10 +8,11 @@ Aplicación web de pedidos y entregas locales en Puyo, con paneles para clientes
    `npm install`
 2. Crea `.env` a partir de `.env.example`.
 3. Configura `VITE_API_URL` con la URL del backend.
-4. Agrega `VITE_GOOGLE_MAPS_API_KEY` en `.env` para habilitar Google Maps interactivo.
-5. Ejecuta `npm run dev` solo si Docker no está activo. Cuando el despliegue Docker responde en `127.0.0.1:8088`, el script evita iniciar un segundo Vite en el puerto 3000.
+4. Ejecuta `npm run dev` solo si Docker no está activo. Cuando el despliegue Docker responde en `127.0.0.1:8088`, el script evita iniciar un segundo Vite en el puerto 3000.
 
 La autenticación usa el backend y una cookie JWT HttpOnly.
+
+El mapa usa Leaflet y OpenStreetMap; no necesita clave API ni cuenta de facturación. Debe conservarse visible la atribución de OpenStreetMap y respetarse su política de uso de teselas.
 
 ## Seguridad y despliegue
 

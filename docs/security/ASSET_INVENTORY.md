@@ -13,7 +13,7 @@
 | JWT de sesión | Crítico | Cookie del navegador | HttpOnly, SameSite=Lax y Secure en HTTPS | Reduce exposición a JavaScript y envío entre sitios. |
 | Pedidos, importes y estados | Interno | PostgreSQL | Autorización por rol y red privada; backup cifrado pendiente | Integridad y disponibilidad son prioritarias. |
 | Logs de auditoría | Confidencial | stdout de backend/colector | Sin contraseñas, tokens, cuerpos, teléfonos ni direcciones | Deben permitir atribución sin convertirse en otra fuga de PII. |
-| Clave de Google Maps | Interno/público restringido | Build del frontend | Restricción por dominio y API en Google Cloud | Una clave frontend es visible; la protección correcta es limitar su uso. |
+| Teselas de OpenStreetMap | Público externo | Navegador | Sin clave; CSP limitada al host oficial y atribución visible | El mapa no requiere secretos ni facturación; se debe respetar la política de uso del proveedor. |
 | Código e imágenes | Interno | Repositorio e imágenes Docker | Control de acceso y revisión; escaneo/SBOM automatizado pendiente | Son activos de software y cadena de suministro. |
 
 ## Decisiones y alcance

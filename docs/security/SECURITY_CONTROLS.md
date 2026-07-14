@@ -8,7 +8,8 @@ Fecha de revisión: 2026-07-14.
 | IAM-02 | Sesión firmada | JWT HMAC con secreto de 256 bits desde Docker secret | Implementado |
 | IAM-03 | Cookie defensiva | HttpOnly y SameSite=Lax; Secure configurable | Implementado local |
 | IAM-04 | Menor privilegio por rol | Spring Security y `@PreAuthorize` en operaciones críticas | Implementado |
-| IAM-05 | Registro público controlado | Solo permite rol cliente | Implementado |
+| IAM-05 | Registro público controlado | Solo permite cliente o repartidor; crea un perfil asociado para el repartidor | Implementado |
+| IAM-07 | Propiedad del repartidor | Estado, aceptación y entrega se limitan al perfil asociado al usuario autenticado | Implementado |
 | IAM-06 | Sesiones sin estado | Política stateless; el servidor no conserva sesión HTTP | Implementado |
 | DAT-01 | Cifrado de PII | AES-256-GCM para teléfonos y direcciones | Implementado |
 | DAT-02 | IV único e integridad | IV aleatorio de 96 bits y tag GCM por valor | Implementado |
@@ -23,7 +24,7 @@ Fecha de revisión: 2026-07-14.
 | API-05 | CORS | Orígenes, métodos y cabeceras explícitos; credenciales controladas | Implementado |
 | API-06 | CSRF | Desactivado; mitigación parcial por SameSite=Lax, CORS y proxy mismo origen | Riesgo aceptado local |
 | API-07 | Rate limiting/bloqueo | No hay limitación por IP/usuario ni bloqueo progresivo demostrado | Pendiente |
-| WEB-01 | Cabeceras | CSP, nosniff, frame deny, no-referrer y Permissions-Policy | Implementado |
+| WEB-01 | Cabeceras | CSP, nosniff, frame deny, `strict-origin-when-cross-origin` y Permissions-Policy | Implementado |
 | WEB-02 | Ocultar versiones | `server_tokens off` y cabecera upstream ocultada | Implementado |
 | WEB-03 | TLS | No forma parte del Compose local | Pendiente para producción |
 | LOG-01 | Auditoría de autenticación | Éxitos y fallos de login/registro/logout | Implementado |
@@ -50,4 +51,3 @@ Fecha de revisión: 2026-07-14.
 - Script `scripts/audit-server-hardening.ps1` y su informe generado.
 
 Los comandos exactos están en [SECURITY_VERIFICATION.md](SECURITY_VERIFICATION.md).
-

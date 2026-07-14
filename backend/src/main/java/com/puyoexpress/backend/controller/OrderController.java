@@ -146,6 +146,14 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Tu rol no puede realizar esta transición."));
         }
+        if ("ROLE_DRIVER".equals(requiredAuthority)) {
+            Long currentDriverId = currentDriverId();
+            if (currentDriverId == null || order.getDriverId() == null
+                    || !order.getDriverId().equals(currentDriverId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Este pedido no está asignado a tu perfil de repartidor."));
+            }
+        }
         if ("picked_up".equals(newStatus) && order.getDriverId() == null) {
             return badRequest("El pedido debe tener un repartidor asignado.");
         }
@@ -191,6 +199,15 @@ public class OrderController {
         if (driver == null || !"active".equals(driver.getStatus())) {
             return badRequest("El repartidor no está disponible.");
         }
+        boolean isDriver = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_DRIVER"));
+        if (isDriver) {
+            Long currentDriverId = currentDriverId();
+            if (currentDriverId == null || !currentDriverId.equals(driver.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Solo puedes aceptar pedidos con tu propio perfil."));
+            }
+        }
 
         order.setDriverId(driver.getId());
         order.setDriverName(driver.getName());
@@ -199,6 +216,16 @@ public class OrderController {
 
     private ResponseEntity<Map<String, String>> badRequest(String message) {
         return ResponseEntity.badRequest().body(Map.of("error", message));
+    }
+
+    private Long currentDriverId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+            return null;
+        }
+        return driverRepository.findByUserId(userDetails.getId())
+                .map(Driver::getId)
+                .orElse(null);
     }
 
     private double calculateDistanceKm(Coordinates origin, Coordinates destination) {

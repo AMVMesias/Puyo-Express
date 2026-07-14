@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export type UserRole = 'ROLE_CUSTOMER' | 'ROLE_RESTAURANT' | 'ROLE_DRIVER';
+export type PublicRegistrationRole = 'CUSTOMER' | 'DRIVER';
 
 export interface AuthUser {
   id: number;
@@ -17,7 +18,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login(username: string, password: string): Promise<boolean>;
   logout(): Promise<void>;
-  register(username: string, email: string, password: string): Promise<AuthResult>;
+  register(username: string, email: string, password: string, role: PublicRegistrationRole): Promise<AuthResult>;
 }
 
 interface AuthResult {
@@ -86,12 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (username: string, email: string, password: string): Promise<AuthResult> => {
+  const register = useCallback(async (
+    username: string,
+    email: string,
+    password: string,
+    role: PublicRegistrationRole,
+  ): Promise<AuthResult> => {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, role: 'CUSTOMER' }),
+        body: JSON.stringify({ username, email, password, role }),
       });
 
       if (response.ok) return { success: true };
