@@ -1,10 +1,9 @@
-import { Activity, Bike, Clock3, MapPinned, ReceiptText, Wallet } from 'lucide-react';
+import { Activity, Bike, Clock3, MapPinned, ReceiptText, Store } from 'lucide-react';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { Badge } from '../atoms/Badge';
 
 export function AppFooter() {
-  const { activeOrder, drivers, isOnline, orders, pendingSyncOrders, restaurants, walletBalance } =
-    useDelivery();
+  const { activeOrder, drivers, orders, restaurants } = useDelivery();
   const deliveredOrders = orders.filter((order) => order.status === 'delivered');
   const activeOrders = orders.filter((order) => order.status !== 'delivered');
   const availableDrivers = drivers.filter((driver) => driver.status === 'active').length;
@@ -25,8 +24,6 @@ export function AppFooter() {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Badge tone={isOnline ? 'emerald' : 'red'}>{isOnline ? 'Operación en línea' : 'Modo offline'}</Badge>
-            {pendingSyncOrders.length > 0 && <Badge tone="amber">{pendingSyncOrders.length} pendientes de sync</Badge>}
             <Badge tone="slate">{restaurants.length} restaurantes activos</Badge>
           </div>
         </div>
@@ -50,10 +47,10 @@ export function AppFooter() {
 
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/15">
             <span className="flex items-center gap-1 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-200">
-              <Wallet className="h-3.5 w-3.5" />
-              Billetera local
+              <Store className="h-3.5 w-3.5" />
+              Restaurantes
             </span>
-            <strong className="mt-1 block text-lg text-emerald-900 dark:text-emerald-100">${walletBalance.toFixed(2)}</strong>
+            <strong className="mt-1 block text-lg text-emerald-900 dark:text-emerald-100">{restaurants.length}</strong>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
@@ -71,7 +68,7 @@ export function AppFooter() {
               <Clock3 className="h-4 w-4 text-emerald-600" />
               {activeOrder
                 ? `Pedido activo: ${activeOrder.restaurantName} → ${activeOrder.deliveryLandmark}`
-                : 'Sin pedido activo. Usa “Pedido demo” o crea uno desde Cliente.'}
+                : 'Sin pedidos activos en este momento.'}
             </span>
             <span className="font-semibold text-slate-800 dark:text-slate-100">
               {deliveredOrders.length} entregas completadas

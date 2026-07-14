@@ -114,8 +114,6 @@ export function LoginPage({ onNavigateToRegister }: { onNavigateToRegister: () =
               {isSubmitting ? 'Ingresando...' : 'Entrar a la app'}
             </Button>
 
-            {/* Removed Test Credentials */}
-            
             <div className="mt-4 text-center">
               <button
                 type="button"

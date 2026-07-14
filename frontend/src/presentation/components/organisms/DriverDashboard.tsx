@@ -11,7 +11,7 @@ import { OrderStatusBadge } from '../molecules/OrderStatusBadge';
 
 export function DriverDashboard() {
   const { assignDriver, drivers, orders, updateDriverStatus, updateOrderStatus } = useDelivery();
-  const [selectedDriverId, setSelectedDriverId] = useState('d1');
+  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const currentDriver = drivers.find((driver) => driver.id === selectedDriverId) ?? drivers[0];
   const myActiveOrder = orders.find(
     (order) => order.driverId === currentDriver?.id && order.status !== 'delivered',
@@ -37,7 +37,7 @@ export function DriverDashboard() {
               {currentDriver?.vehicle === 'bici' ? '🚲' : '🏍️'}
             </span>
             <div className="min-w-0 flex-1">
-              <Select label="Identidad del repartidor" onChange={(event) => setSelectedDriverId(event.target.value)} value={selectedDriverId}>
+              <Select label="Identidad del repartidor" onChange={(event) => setSelectedDriverId(Number(event.target.value))} value={currentDriver?.id ?? ''}>
                 {drivers.map((driver) => (
                   <option key={driver.id} value={driver.id}>
                     {driver.name} - {driver.vehicle === 'moto' ? 'Moto' : 'Bici'}
@@ -114,7 +114,6 @@ export function DriverDashboard() {
                   </div>
                   <Button
                     className="w-full"
-                    disabled={myActiveOrder.routeProgress < 100}
                     icon={<CheckCircle2 className="h-4 w-4" />}
                     onClick={() => updateOrderStatus(myActiveOrder.id, 'delivered')}
                   >

@@ -1,7 +1,7 @@
 import { Lock, MapPinned, Route, ShieldCheck, Store, Truck, UserPlus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import loginHero from '../../../assets/puyo-express-login-hero.png';
-import { useAuth, type UserRole } from '../../application/auth/AuthProvider';
+import { useAuth } from '../../application/auth/AuthProvider';
 import { useToast } from '../../application/toast/ToastProvider';
 import { Button } from '../components/atoms/Button';
 import { Card } from '../components/atoms/Card';
@@ -14,7 +14,6 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('ROLE_CUSTOMER');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -22,13 +21,13 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
     setIsSubmitting(true);
 
     try {
-      const success = await register(username, email, password, role);
+      const result = await register(username, email, password);
 
-      if (success) {
-        notify('Registro exitoso. Ahora puedes iniciar sesión.', 'emerald');
+      if (result.success) {
+        notify('Registro exitoso. Ahora puedes iniciar sesión.', 'success');
         onNavigateToLogin();
       } else {
-        notify('Hubo un problema con el registro. Verifica tus datos.', 'warning');
+        notify(result.message ?? 'Hubo un problema con el registro.', 'warning');
       }
     } catch {
       notify('Error de conexión con el servidor.', 'warning');
@@ -85,19 +84,6 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               value={password}
             />
             
-            <div className="space-y-1.5">
-              <label className="block text-sm font-semibold text-slate-700">Rol</label>
-              <select
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-              >
-                <option value="ROLE_CUSTOMER">Cliente</option>
-                <option value="ROLE_DRIVER">Repartidor</option>
-                <option value="ROLE_RESTAURANT">Restaurante</option>
-              </select>
-            </div>
-
             <Button
               className="mt-6 w-full shadow-lg shadow-emerald-700/20 hover:shadow-emerald-700/30"
               icon={<UserPlus className="h-4 w-4" />}

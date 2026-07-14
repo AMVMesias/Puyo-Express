@@ -25,24 +25,17 @@ interface DeliveryContextValue {
   activeOrder?: Order;
   activeTab: AppTab;
   drivers: Driver[];
-  isOnline: boolean;
   landmarks: Landmark[];
   orders: Order[];
-  pendingSyncOrders: Order[];
   restaurants: Restaurant[];
   selectedLandmark?: Landmark;
-  selectedLandmarkId: string;
-  walletBalance: number;
-  assignDriver(orderId: string, driverId: string): Promise<void>;
-  placeOrder(input: PlaceOrderInput): Promise<void>;
-  rechargeRestaurantWallet(amount: number): void;
-  resetData(): void;
-  selectLandmark(landmarkId: string): void;
+  selectedLandmarkId: number | null;
+  assignDriver(orderId: number, driverId: number): Promise<void>;
+  placeOrder(input: PlaceOrderInput): Promise<boolean>;
+  selectLandmark(landmarkId: number): void;
   setActiveTab(tab: AppTab): void;
-  toggleOnline(): void;
-  updateDriverStatus(driverId: string, status: DriverStatus): Promise<void>;
-  updateOrderCommission(orderId: string, commission: number): void;
-  updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
+  updateDriverStatus(driverId: number, status: DriverStatus): Promise<void>;
+  updateOrderStatus(orderId: number, status: OrderStatus): Promise<void>;
   refreshOrders(): Promise<void>;
 }
 
@@ -56,30 +49,27 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [landmarks, setLandmarks] = useState<Landmark[]>([]);
   
-  const [walletBalance, setWalletBalance] = useState(35);
-  const [isOnline, setIsOnline] = useState(true);
   const [activeTab, setActiveTab] = useState<AppTab>('customer');
-  const [selectedLandmarkId, setSelectedLandmarkId] = useState('');
+  const [selectedLandmarkId, setSelectedLandmarkId] = useState<number | null>(null);
 
-  const selectedLandmark = landmarks.find((l) => String(l.id) === selectedLandmarkId);
+  const selectedLandmark = landmarks.find((landmark) => landmark.id === selectedLandmarkId);
   const activeOrder = orders.find((order) => order.status !== 'delivered');
-  const pendingSyncOrders: Order[] = [];
 
   const fetchData = useCallback(async () => {
     try {
       const [resReq, drvReq, lndReq, ordReq] = await Promise.all([
-        fetch(`${API_URL}/restaurants`),
-        fetch(`${API_URL}/drivers`),
-        fetch(`${API_URL}/landmarks`),
-        fetch(`${API_URL}/orders`)
+        fetch(`${API_URL}/restaurants`, { credentials: 'include' }),
+        fetch(`${API_URL}/drivers`, { credentials: 'include' }),
+        fetch(`${API_URL}/landmarks`, { credentials: 'include' }),
+        fetch(`${API_URL}/orders`, { credentials: 'include' })
       ]);
       if (resReq.ok) setRestaurants(await resReq.json());
       if (drvReq.ok) setDrivers(await drvReq.json());
       if (lndReq.ok) {
         const l = await lndReq.json();
         setLandmarks(l);
-        if (l.length > 0 && !l.find((x: any) => String(x.id) === selectedLandmarkId)) {
-          setSelectedLandmarkId(String(l[0].id));
+        if (l.length > 0 && !l.some((landmark: Landmark) => landmark.id === selectedLandmarkId)) {
+          setSelectedLandmarkId(l[0].id);
         }
       }
       if (ordReq.ok) setOrders(await ordReq.json());
@@ -94,15 +84,14 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
 
   const refreshOrders = async () => {
     try {
-      const req = await fetch(`${API_URL}/orders`);
+      const req = await fetch(`${API_URL}/orders`, { credentials: 'include' });
       if (req.ok) setOrders(await req.json());
     } catch (e) {
       console.error(e);
     }
   };
 
-  const selectLandmark = (landmarkId: string) => setSelectedLandmarkId(landmarkId);
-  const toggleOnline = () => setIsOnline((prev) => !prev);
+  const selectLandmark = (landmarkId: number) => setSelectedLandmarkId(landmarkId);
   const setActiveTabWrapper = (tab: AppTab) => setActiveTab(tab);
 
   const placeOrder = async (input: PlaceOrderInput) => {
@@ -110,6 +99,7 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           restaurantId: input.restaurantId,
           restaurantName: input.restaurantName,
@@ -126,20 +116,25 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       });
       if (res.ok) {
         notify('Pedido enviado correctamente.', 'success');
-        refreshOrders();
+        await refreshOrders();
+        return true;
       } else {
-        notify('Error al crear pedido.', 'warning');
+        const body = await res.json().catch(() => null);
+        notify(body?.error ?? 'Error al crear pedido.', 'warning');
+        return false;
       }
     } catch (e) {
       notify('Error de red al crear pedido.', 'warning');
+      return false;
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = async (orderId: number, status: OrderStatus) => {
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status })
       });
       if (res.ok) {
@@ -151,12 +146,13 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const assignDriver = async (orderId: string, driverId: string) => {
-    const driver = drivers.find(d => String(d.id) === driverId);
+  const assignDriver = async (orderId: number, driverId: number) => {
+    const driver = drivers.find((candidate) => candidate.id === driverId);
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/assign-driver`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ driverId, driverName: driver?.name })
       });
       if (res.ok) {
@@ -168,33 +164,21 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateDriverStatus = async (driverId: string, status: DriverStatus) => {
+  const updateDriverStatus = async (driverId: number, status: DriverStatus) => {
     try {
       const res = await fetch(`${API_URL}/drivers/${driverId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status })
       });
       if (res.ok) {
         const updated = await res.json();
-        setDrivers(prev => prev.map(d => String(d.id) === driverId ? updated : d));
+        setDrivers((currentDrivers) => currentDrivers.map((driver) => driver.id === driverId ? updated : driver));
       }
     } catch (e) {
       console.error(e);
     }
-  };
-
-  const updateOrderCommission = (orderId: string, commission: number) => {
-    notify('Función no implementada en el backend aún', 'info');
-  };
-
-  const rechargeRestaurantWallet = (amount: number) => {
-    setWalletBalance((prev) => prev + amount);
-    notify(`Billetera recargada con $${amount.toFixed(2)}.`, 'success');
-  };
-
-  const resetData = () => {
-    notify('Reset data no está disponible en modo backend real', 'info');
   };
 
   const value = useMemo(
@@ -203,21 +187,15 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       activeTab,
       assignDriver,
       drivers,
-      isOnline,
       landmarks,
       orders,
-      pendingSyncOrders,
       placeOrder,
-      rechargeRestaurantWallet,
-      resetData,
       restaurants,
       selectLandmark,
       selectedLandmark,
       selectedLandmarkId,
       setActiveTab: setActiveTabWrapper,
-      toggleOnline,
       updateDriverStatus,
-      updateOrderCommission,
       updateOrderStatus,
       refreshOrders,
     }),
@@ -225,14 +203,11 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       activeOrder,
       activeTab,
       drivers,
-      isOnline,
       landmarks,
       orders,
-      pendingSyncOrders,
       restaurants,
       selectedLandmark,
       selectedLandmarkId,
-      walletBalance,
     ],
   );
 

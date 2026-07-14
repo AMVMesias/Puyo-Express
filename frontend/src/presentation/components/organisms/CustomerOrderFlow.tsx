@@ -29,10 +29,10 @@ export function CustomerOrderFlow() {
   } = useDelivery();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [customerName, setCustomerName] = useState('Denise Turista');
-  const [customerPhone, setCustomerPhone] = useState('0981234567');
-  const [deliveryAddress, setDeliveryAddress] = useState('Habitación 203, junto a los jardines principales');
-  const [landmarkId, setLandmarkId] = useState(selectedLandmark?.id ?? 'l4');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [landmarkId, setLandmarkId] = useState<number | null>(selectedLandmark?.id ?? null);
 
   useEffect(() => {
     if (selectedLandmark) setLandmarkId(selectedLandmark.id);
@@ -53,7 +53,7 @@ export function CustomerOrderFlow() {
     });
   };
 
-  const updateQuantity = (itemId: string, change: number) => {
+  const updateQuantity = (itemId: number, change: number) => {
     setCart((currentCart) =>
       currentCart
         .map((cartItem) =>
@@ -65,11 +65,11 @@ export function CustomerOrderFlow() {
     );
   };
 
-  const submitOrder = (event: FormEvent<HTMLFormElement>) => {
+  const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedRestaurant || cart.length === 0) return;
+    if (!selectedRestaurant || cart.length === 0 || landmarkId === null) return;
 
-    placeOrder({
+    const created = await placeOrder({
       customerName,
       customerPhone,
       deliveryAddress,
@@ -78,8 +78,10 @@ export function CustomerOrderFlow() {
       restaurantId: selectedRestaurant.id,
       restaurantName: selectedRestaurant.name,
     });
-    setCart([]);
-    setSelectedRestaurant(null);
+    if (created) {
+      setCart([]);
+      setSelectedRestaurant(null);
+    }
   };
 
   if (activeOrder) {
@@ -243,10 +245,11 @@ export function CustomerOrderFlow() {
               <Select
                 label="Punto de entrega"
                 onChange={(event) => {
-                  setLandmarkId(event.target.value);
-                  selectLandmark(event.target.value);
+                  const id = Number(event.target.value);
+                  setLandmarkId(id);
+                  selectLandmark(id);
                 }}
-                value={landmarkId}
+                value={landmarkId ?? ''}
               >
                 {landmarks.map((landmark) => (
                   <option key={landmark.id} value={landmark.id}>

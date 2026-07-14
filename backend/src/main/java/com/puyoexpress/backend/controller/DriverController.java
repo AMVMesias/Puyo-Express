@@ -3,6 +3,7 @@ package com.puyoexpress.backend.controller;
 import com.puyoexpress.backend.model.Driver;
 import com.puyoexpress.backend.repository.DriverRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class DriverController {
     }
     
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('ROLE_DRIVER')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return repository.findById(id).map(driver -> {
             driver.setStatus(body.get("status"));

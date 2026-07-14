@@ -72,26 +72,39 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = request.getUsername().trim();
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("El nombre de usuario ya está en uso.");
         }
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("El correo electrónico ya está registrado.");
         }
 
         ERole role;
         try {
-            role = ERole.valueOf("ROLE_" + request.getRole().toUpperCase());
+            String normalizedRole = request.getRole().trim().toUpperCase();
+            if (!normalizedRole.startsWith("ROLE_")) {
+                normalizedRole = "ROLE_" + normalizedRole;
+            }
+            role = ERole.valueOf(normalizedRole);
+            if (role != ERole.ROLE_CUSTOMER) {
+                throw new IllegalArgumentException("El registro público solo permite cuentas de cliente.");
+            }
         } catch (IllegalArgumentException e) {
+            if ("El registro público solo permite cuentas de cliente.".equals(e.getMessage())) {
+                throw e;
+            }
             throw new IllegalArgumentException(
-                    "Rol inválido. Usa: CUSTOMER, RESTAURANT o DRIVER."
+                    "Rol inválido. Usa CUSTOMER."
             );
         }
 
         User user = new User(
-                request.getUsername(),
-                request.getEmail(),
+                username,
+                email,
                 passwordEncoder.encode(request.getPassword()),
                 role
         );

@@ -16,7 +16,7 @@ export type DriverStatus = 'active' | 'delivering' | 'offline';
 export type VehicleType = 'moto' | 'bici';
 
 export interface MenuItem {
-  id: string;
+  id: number;
   name: string;
   description: string;
   price: number;
@@ -25,7 +25,7 @@ export interface MenuItem {
 }
 
 export interface Restaurant {
-  id: string;
+  id: number;
   name: string;
   description: string;
   category: string;
@@ -38,7 +38,7 @@ export interface Restaurant {
 }
 
 export interface Driver {
-  id: string;
+  id: number;
   name: string;
   phone: string;
   zone: string;
@@ -51,7 +51,7 @@ export interface Driver {
 }
 
 export interface Landmark {
-  id: string;
+  id: number;
   name: string;
   type: LandmarkType;
   description: string;
@@ -64,8 +64,8 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: string;
-  restaurantId: string;
+  id: number;
+  restaurantId: number;
   restaurantName: string;
   customerName: string;
   customerPhone: string;
@@ -75,26 +75,24 @@ export interface Order {
   commission: number;
   distanceKm: number;
   deliveryAddress: string;
-  deliveryLandmarkId: string;
+  deliveryLandmarkId: number;
   deliveryLandmark: string;
   destination: Coordinates;
   status: OrderStatus;
-  driverId?: string;
+  driverId?: number;
   driverName?: string;
   createdAt: string;
   routeProgress: number;
-  synchronized: boolean;
-  isOfflinePending: boolean;
 }
 
 export interface PlaceOrderInput {
-  restaurantId: string;
+  restaurantId: number;
   restaurantName: string;
   items: OrderItem[];
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
-  landmarkId: string;
+  landmarkId: number;
 }
 
 export type AppTab = 'customer' | 'restaurant' | 'driver';

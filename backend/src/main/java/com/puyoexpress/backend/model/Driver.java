@@ -1,5 +1,6 @@
 package com.puyoexpress.backend.model;
 
+import com.puyoexpress.backend.security.SensitiveStringConverter;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,6 +11,8 @@ public class Driver {
     private Long id;
 
     private String name;
+    @Column(length = 512)
+    @Convert(converter = SensitiveStringConverter.class)
     private String phone;
     private String zone;
     private String vehicle;

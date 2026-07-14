@@ -1,4 +1,5 @@
 import { Navigation, Smartphone, Store } from 'lucide-react';
+import { useEffect } from 'react';
 import { useAuth, type UserRole } from '../../application/auth/AuthProvider';
 import { useDelivery } from '../../application/delivery/DeliveryProvider';
 import { AppFooter } from '../components/organisms/AppFooter';
@@ -26,10 +27,12 @@ export function DashboardPage() {
   const userRole = user?.role;
   const allowedTab = userRole ? ROLE_TAB_MAP[userRole] : null;
 
-  // If the user has a role-assigned tab that differs from the active tab, sync it
-  if (allowedTab && activeTab !== allowedTab.id) {
-    setActiveTab(allowedTab.id as 'customer' | 'restaurant' | 'driver');
-  }
+  // Synchronize context state after rendering, never while another component renders.
+  useEffect(() => {
+    if (allowedTab && activeTab !== allowedTab.id) {
+      setActiveTab(allowedTab.id as 'customer' | 'restaurant' | 'driver');
+    }
+  }, [activeTab, allowedTab, setActiveTab]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">

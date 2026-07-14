@@ -32,6 +32,9 @@ public class JwtUtils {
     @Value("${app.jwt.cookie-name}")
     private String cookieName;
 
+    @Value("${app.jwt.secure-cookie:false}")
+    private boolean secureCookie;
+
     /**
      * Extracts the JWT token from the HttpOnly cookie in the request.
      */
@@ -62,7 +65,7 @@ public class JwtUtils {
                 .path("/")
                 .maxAge(jwtExpirationMs / 1000)
                 .httpOnly(true)
-                .secure(false) // Set to true in production with HTTPS
+                .secure(secureCookie)
                 .sameSite("Lax")
                 .build();
     }
@@ -75,7 +78,7 @@ public class JwtUtils {
                 .path("/")
                 .maxAge(0)
                 .httpOnly(true)
-                .secure(false)
+                .secure(secureCookie)
                 .sameSite("Lax")
                 .build();
     }

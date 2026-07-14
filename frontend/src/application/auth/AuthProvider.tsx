@@ -17,7 +17,12 @@ interface AuthContextValue {
   isLoading: boolean;
   login(username: string, password: string): Promise<boolean>;
   logout(): Promise<void>;
-  register(username: string, email: string, password: string, role: UserRole): Promise<boolean>;
+  register(username: string, email: string, password: string): Promise<AuthResult>;
+}
+
+interface AuthResult {
+  success: boolean;
+  message?: string;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -81,17 +86,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (username: string, email: string, password: string, role: UserRole): Promise<boolean> => {
+  const register = useCallback(async (username: string, email: string, password: string): Promise<AuthResult> => {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ username, email, password, role: 'CUSTOMER' }),
       });
 
-      return response.ok;
+      if (response.ok) return { success: true };
+
+      const body = await response.json().catch(() => null);
+      return {
+        success: false,
+        message: body?.error ?? body?.message ?? 'Verifica los datos ingresados.',
+      };
     } catch {
-      return false;
+      return { success: false, message: 'No se pudo conectar con el servidor.' };
     }
   }, []);
 

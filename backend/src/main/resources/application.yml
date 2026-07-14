@@ -3,15 +3,29 @@
 # ===========================
 server:
   port: 8080
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  server-header: ""
+  forward-headers-strategy: framework
+  max-http-request-header-size: 16KB
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    whitelabel:
+      enabled: false
+  tomcat:
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
+    max-parameter-count: 100
 
 # ===========================
 # Database (PostgreSQL)
 # ===========================
 spring:
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5432/${POSTGRES_DB:puyo_express_db}
-    username: ${POSTGRES_USER:puyo_admin}
-    password: ${POSTGRES_PASSWORD:PuyoExpr3ss_S3cur3!2026}
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/${POSTGRES_DB:puyo_express_db}}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -19,12 +33,12 @@ spring:
       connection-timeout: 20000
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 # ===========================
@@ -32,20 +46,31 @@ spring:
 # ===========================
 app:
   jwt:
-    secret: ${JWT_SECRET:default-secret-change-me-in-production}
+    secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
     cookie-name: puyo_jwt
+    secure-cookie: ${JWT_SECURE_COOKIE:false}
+
+  crypto:
+    data-key: ${DATA_ENCRYPTION_KEY}
+
+  http:
+    max-request-bytes: ${MAX_REQUEST_BYTES:1048576}
 
 # ===========================
 # CORS
 # ===========================
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:5173
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 # ===========================
 # Logging
 # ===========================
 logging:
   level:
-    com.puyoexpress: DEBUG
-    org.springframework.security: INFO
+    root: INFO
+    com.puyoexpress: INFO
+    SECURITY_AUDIT: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level logger=%logger{36} thread=%thread msg=%msg%n"

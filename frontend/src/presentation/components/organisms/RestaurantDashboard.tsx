@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Clock, ClipboardList, DollarSign, Send, Users } from 'lucide-react';
+import { Clock, ClipboardList, DollarSign, Send, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { isInsideDriverRadius } from '../../../domain/useCases';
@@ -16,16 +16,13 @@ export function RestaurantDashboard() {
     drivers,
     orders,
     restaurants,
-    updateOrderCommission,
     updateOrderStatus,
-    walletBalance,
   } = useDelivery();
-  const [activeRestaurantId, setActiveRestaurantId] = useState('r1');
-  const [commissionEditOrderId, setCommissionEditOrderId] = useState<string | null>(null);
-  const [commissionValue, setCommissionValue] = useState(2);
+  const [activeRestaurantId, setActiveRestaurantId] = useState<number | null>(null);
 
   const activeRestaurant = restaurants.find((restaurant) => restaurant.id === activeRestaurantId) ?? restaurants[0];
-  const restaurantOrders = orders.filter((order) => order.restaurantId === activeRestaurantId);
+  const effectiveRestaurantId = activeRestaurant?.id;
+  const restaurantOrders = orders.filter((order) => order.restaurantId === effectiveRestaurantId);
   const completedOrders = restaurantOrders.filter((order) => order.status === 'delivered');
   const activeOrders = restaurantOrders.filter((order) => order.status !== 'delivered');
   const sales = completedOrders.reduce((total, order) => total + order.foodTotal, 0);
@@ -51,7 +48,7 @@ export function RestaurantDashboard() {
               {activeRestaurant?.logo}
             </span>
             <div className="min-w-0 flex-1">
-              <Select label="Restaurante en gestión" onChange={(event) => setActiveRestaurantId(event.target.value)} value={activeRestaurantId}>
+              <Select label="Restaurante en gestión" onChange={(event) => setActiveRestaurantId(Number(event.target.value))} value={effectiveRestaurantId ?? ''}>
                 {restaurants.map((restaurant) => (
                   <option key={restaurant.id} value={restaurant.id}>
                     {restaurant.name} - {restaurant.category}
@@ -67,13 +64,6 @@ export function RestaurantDashboard() {
           </div>
         </div>
       </Card>
-
-      {walletBalance < 5 && (
-        <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>La billetera tiene saldo bajo. Recarga antes de asignar pedidos con comisión alta.</span>
-        </div>
-      )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="space-y-3">
@@ -94,7 +84,7 @@ export function RestaurantDashboard() {
               <Card key={order.id} className="space-y-4 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <Badge>#{order.id.slice(-6).toUpperCase()}</Badge>
+                    <Badge>#{String(order.id).padStart(6, '0')}</Badge>
                     <h3 className="mt-2 font-black text-slate-900">{order.customerName}</h3>
                     <p className="mt-1 text-sm text-slate-500">
                       {order.deliveryLandmark} - {order.deliveryAddress}
@@ -121,42 +111,7 @@ export function RestaurantDashboard() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-600">Comisión:</span>
-                    {commissionEditOrderId === order.id ? (
-                      <>
-                        <input
-                          className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm"
-                          min="1"
-                          onChange={(event) => setCommissionValue(Number(event.target.value))}
-                          step="0.5"
-                          type="number"
-                          value={commissionValue}
-                        />
-                        <Button
-                          icon={<Check className="h-4 w-4" />}
-                          onClick={() => {
-                            updateOrderCommission(order.id, commissionValue);
-                            setCommissionEditOrderId(null);
-                          }}
-                        >
-                          Guardar
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Badge tone="emerald">${order.commission.toFixed(2)}</Badge>
-                        {order.status === 'pending' && (
-                          <Button
-                            onClick={() => {
-                              setCommissionEditOrderId(order.id);
-                              setCommissionValue(order.commission);
-                            }}
-                            variant="ghost"
-                          >
-                            Modificar
-                          </Button>
-                        )}
-                      </>
-                    )}
+                    <Badge tone="emerald">${order.commission.toFixed(2)}</Badge>
                   </div>
 
                   <div className="flex flex-wrap gap-2">

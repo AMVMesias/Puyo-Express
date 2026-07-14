@@ -5,7 +5,6 @@ import type { Coordinates, Landmark, Order, Restaurant } from '../../../domain/e
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { Card } from '../atoms/Card';
 import { Badge } from '../atoms/Badge';
-import { Button } from '../atoms/Button';
 
 type GoogleMarker = {
   setMap(map: GoogleMap | null): void;
@@ -74,6 +73,7 @@ type GoogleMapsApi = {
 declare global {
   interface Window {
     google?: GoogleMapsApi;
+    gm_authFailure?: () => void;
     puyoExpressGoogleMapsReady?: () => void;
   }
 }
@@ -84,18 +84,23 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
   if (window.google) return Promise.resolve(window.google);
 
   return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(
+      () => reject(new Error('Google Maps tardó demasiado en responder')),
+      15000,
+    );
+    const resolveLoadedApi = () => {
+      window.clearTimeout(timeoutId);
+      if (window.google) resolve(window.google);
+      else reject(new Error('Google Maps no se cargó correctamente'));
+    };
+
     const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
     if (existingScript) {
-      window.puyoExpressGoogleMapsReady = () => {
-        if (window.google) resolve(window.google);
-      };
+      window.puyoExpressGoogleMapsReady = resolveLoadedApi;
       return;
     }
 
-    window.puyoExpressGoogleMapsReady = () => {
-      if (window.google) resolve(window.google);
-      else reject(new Error('Google Maps no se cargó correctamente.'));
-    };
+    window.puyoExpressGoogleMapsReady = resolveLoadedApi;
 
     const script = document.createElement('script');
     script.id = GOOGLE_MAPS_SCRIPT_ID;
@@ -103,8 +108,11 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
     script.defer = true;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey,
-    )}&callback=puyoExpressGoogleMapsReady`;
-    script.onerror = () => reject(new Error('No se pudo cargar Google Maps.'));
+    )}&callback=puyoExpressGoogleMapsReady&loading=async`;
+    script.onerror = () => {
+      window.clearTimeout(timeoutId);
+      reject(new Error('No se pudo cargar Google Maps'));
+    };
     document.head.appendChild(script);
   });
 }
@@ -132,7 +140,7 @@ function projectToMap(position: Coordinates) {
   };
 }
 
-function LocalDemoMap({
+function LocalFallbackMap({
   activeOrder,
   activeRestaurant,
   landmarks,
@@ -144,8 +152,8 @@ function LocalDemoMap({
   activeRestaurant?: Restaurant;
   landmarks: Landmark[];
   restaurants: Restaurant[];
-  selectLandmark: (landmarkId: string) => void;
-  selectedLandmarkId: string;
+  selectLandmark: (landmarkId: number) => void;
+  selectedLandmarkId: number | null;
 }) {
   const origin = activeRestaurant?.position ?? restaurants[0]?.position;
   const destination = activeOrder?.destination;
@@ -240,8 +248,8 @@ function LocalDemoMap({
       )}
 
       <div className="absolute left-3 top-3 z-40 rounded-lg border border-white/70 bg-white/90 p-3 text-xs text-slate-600 shadow-sm backdrop-blur">
-        <p className="font-bold text-slate-900">Mapa demo de Puyo</p>
-        <p>Funciona sin API key. Los puntos usan latitud/longitud reales.</p>
+        <p className="font-bold text-slate-900">Mapa de Puyo</p>
+        <p>Vista local basada en las coordenadas registradas.</p>
       </div>
     </div>
   );
@@ -250,15 +258,11 @@ function LocalDemoMap({
 export function DeliveryMap() {
   const {
     activeOrder,
-    assignDriver,
-    drivers,
     landmarks,
     restaurants,
     selectLandmark,
     selectedLandmark,
     selectedLandmarkId,
-    setActiveTab,
-    updateOrderStatus,
   } = useDelivery();
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<GoogleMap | null>(null);
@@ -274,12 +278,27 @@ export function DeliveryMap() {
 
   const routeOrigin = activeRestaurant?.position ?? restaurants[0]?.position ?? PUYO_CENTER;
   const routeDestination = activeOrder?.destination ?? selectedLandmark?.position ?? PUYO_CENTER;
-  const availableDriver = drivers.find((driver) => driver.status === 'active');
 
   useEffect(() => {
     if (!apiKey || !mapElementRef.current) return;
 
     let cancelled = false;
+    const previousAuthFailure = window.gm_authFailure;
+    const handleAuthFailure = () => {
+      if (!cancelled) {
+        setMapError(
+          'Google Maps rechazó la clave. Revisa que Maps JavaScript API y la facturación estén activas y que el dominio actual esté autorizado',
+        );
+      }
+    };
+    window.gm_authFailure = handleAuthFailure;
+    const mapElement = mapElementRef.current;
+    const errorObserver = new MutationObserver(() => {
+      if (mapElement.querySelector('.gm-err-container, .gm-err-message')) {
+        handleAuthFailure();
+      }
+    });
+    errorObserver.observe(mapElement, { childList: true, subtree: true });
 
     loadGoogleMaps(apiKey)
       .then((googleApi) => {
@@ -369,6 +388,10 @@ export function DeliveryMap() {
 
     return () => {
       cancelled = true;
+      errorObserver.disconnect();
+      if (window.gm_authFailure === handleAuthFailure) {
+        window.gm_authFailure = previousAuthFailure;
+      }
     };
   }, [
     activeOrder,
@@ -382,69 +405,6 @@ export function DeliveryMap() {
   ]);
 
   const directionsUrl = googleMapsDirectionsUrl(routeOrigin, routeDestination);
-  const mapAction = (() => {
-    if (!activeOrder) {
-      return {
-        disabled: true,
-        label: selectedLandmark ? `Destino: ${selectedLandmark.name}` : 'Esperando pedido',
-        run: () => {},
-      };
-    }
-
-    if (activeOrder.status === 'pending') {
-      return {
-        disabled: false,
-        label: 'Aceptar pedido',
-        run: () => updateOrderStatus(activeOrder.id, 'accepted'),
-      };
-    }
-
-    if (activeOrder.status === 'accepted') {
-      return {
-        disabled: false,
-        label: 'Empezar cocina',
-        run: () => updateOrderStatus(activeOrder.id, 'preparing'),
-      };
-    }
-
-    if (activeOrder.status === 'preparing') {
-      return {
-        disabled: false,
-        label: 'Marcar listo',
-        run: () => updateOrderStatus(activeOrder.id, 'ready_for_pickup'),
-      };
-    }
-
-    if (activeOrder.status === 'ready_for_pickup' && !activeOrder.driverId) {
-      return {
-        disabled: !availableDriver,
-        label: availableDriver ? `Asignar ${availableDriver.name.split(' ')[0]}` : 'Sin repartidor disponible',
-        run: () => availableDriver && assignDriver(activeOrder.id, availableDriver.id),
-      };
-    }
-
-    if (activeOrder.status === 'ready_for_pickup' && activeOrder.driverId) {
-      return {
-        disabled: false,
-        label: 'Recoger pedido',
-        run: () => updateOrderStatus(activeOrder.id, 'picked_up'),
-      };
-    }
-
-    if (activeOrder.status === 'picked_up') {
-      return {
-        disabled: activeOrder.routeProgress < 100,
-        label: activeOrder.routeProgress < 100 ? `En ruta ${Math.round(activeOrder.routeProgress)}%` : 'Entregar pedido',
-        run: () => updateOrderStatus(activeOrder.id, 'delivered'),
-      };
-    }
-
-    return {
-      disabled: true,
-      label: 'Sin acciones',
-      run: () => {},
-    };
-  })();
 
   return (
     <Card className="overflow-hidden">
@@ -458,7 +418,7 @@ export function DeliveryMap() {
             <p className="text-xs text-slate-500">Google Maps con restaurantes, destinos y ruta activa.</p>
           </div>
         </div>
-        {activeOrder ? <Badge tone="emerald">Pedido #{activeOrder.id.slice(-6)}</Badge> : <Badge>Sin pedido activo</Badge>}
+        {activeOrder ? <Badge tone="emerald">Pedido #{String(activeOrder.id).padStart(6, '0')}</Badge> : <Badge>Sin pedido activo</Badge>}
       </header>
 
       <div className="relative min-h-[420px] bg-slate-100">
@@ -466,7 +426,7 @@ export function DeliveryMap() {
           <>
             <div ref={mapElementRef} className="absolute inset-0" />
             {mapError && (
-              <LocalDemoMap
+              <LocalFallbackMap
                 activeOrder={activeOrder}
                 activeRestaurant={activeRestaurant}
                 landmarks={landmarks}
@@ -477,12 +437,12 @@ export function DeliveryMap() {
             )}
             {mapError && (
               <div className="absolute inset-x-4 top-4 z-50 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 shadow-sm">
-                {mapError}. Mostrando mapa demo local.
+                {mapError}. Mostrando la vista local de respaldo.
               </div>
             )}
           </>
         ) : (
-          <LocalDemoMap
+          <LocalFallbackMap
             activeOrder={activeOrder}
             activeRestaurant={activeRestaurant}
             landmarks={landmarks}
@@ -504,16 +464,8 @@ export function DeliveryMap() {
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {activeOrder
               ? `${activeOrder.restaurantName} · ${activeOrder.distanceKm.toFixed(2)} km · $${activeOrder.commission.toFixed(2)} comisión`
-              : selectedLandmark?.description ?? 'Haz click en un pin del mapa para cambiar el destino demo.'}
+              : selectedLandmark?.description ?? 'Selecciona un punto de referencia en el mapa.'}
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2 md:justify-end">
-          <Button disabled={mapAction.disabled} onClick={mapAction.run}>
-            {mapAction.label}
-          </Button>
-          <Button onClick={() => setActiveTab(activeOrder ? 'restaurant' : 'customer')} variant="secondary">
-            Abrir panel
-          </Button>
         </div>
       </section>
 

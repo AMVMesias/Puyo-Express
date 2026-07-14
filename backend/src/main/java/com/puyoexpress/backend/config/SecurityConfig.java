@@ -1,7 +1,10 @@
 package com.puyoexpress.backend.config;
 
 import com.puyoexpress.backend.security.JwtAuthFilter;
+import com.puyoexpress.backend.security.AuditLogFilter;
+import com.puyoexpress.backend.security.RequestSizeLimitFilter;
 import com.puyoexpress.backend.security.UserDetailsServiceImpl;
+import com.puyoexpress.backend.service.SecurityAuditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +20,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -46,6 +51,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
+    @Value("${app.http.max-request-bytes:1048576}")
+    private int maxRequestBytes;
+
     public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtAuthFilter jwtAuthFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
@@ -70,11 +78,21 @@ public class SecurityConfig {
     }
 
     @Bean
+    public RequestSizeLimitFilter requestSizeLimitFilter() {
+        return new RequestSizeLimitFilter(maxRequestBytes);
+    }
+
+    @Bean
+    public AuditLogFilter auditLogFilter(SecurityAuditService auditService) {
+        return new AuditLogFilter(auditService);
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Content-Type", "Accept", "X-Request-ID"));
         configuration.setAllowCredentials(true); // Required for HttpOnly cookies
         configuration.setMaxAge(3600L);
 
@@ -84,7 +102,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           RequestSizeLimitFilter requestSizeLimitFilter,
+                                           AuditLogFilter auditLogFilter) throws Exception {
         http
             // CORS configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -95,6 +115,17 @@ public class SecurityConfig {
             // Stateless session management (no server-side sessions)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+
+            .headers(headers -> headers
+                .contentTypeOptions(contentType -> {})
+                .frameOptions(frame -> frame.deny())
+                .referrerPolicy(referrer -> referrer
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
+                    "camera=(), microphone=(), geolocation=(), payment=()"))
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'none'; frame-ancestors 'none'"))
             )
 
             // Authorization rules
@@ -116,7 +147,9 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider())
 
             // Add JWT filter before the default authentication filter
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(requestSizeLimitFilter, JwtAuthFilter.class)
+            .addFilterAfter(auditLogFilter, JwtAuthFilter.class);
 
         return http.build();
     }

@@ -5,12 +5,15 @@ import com.puyoexpress.backend.dto.LoginRequest;
 import com.puyoexpress.backend.dto.RegisterRequest;
 import com.puyoexpress.backend.security.UserDetailsImpl;
 import com.puyoexpress.backend.service.AuthService;
+import com.puyoexpress.backend.service.SecurityAuditService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,9 +28,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final SecurityAuditService audit;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, SecurityAuditService audit) {
         this.authService = authService;
+        this.audit = audit;
     }
 
     /**
@@ -35,12 +40,20 @@ public class AuthController {
      * Authenticates a user and sets the JWT as an HttpOnly cookie.
      */
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthService.LoginResult result = authService.login(request);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, result.cookie().toString())
-                .body(result.response());
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        try {
+            AuthService.LoginResult result = authService.login(request);
+            audit.record("AUTH_LOGIN", "SUCCESS", result.response().getUsername(),
+                    httpRequest.getRemoteAddr(), "role=" + result.response().getRole());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, result.cookie().toString())
+                    .body(result.response());
+        } catch (AuthenticationException exception) {
+            audit.record("AUTH_LOGIN", "FAILURE", request.getUsername(),
+                    httpRequest.getRemoteAddr(), "invalid_credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Credenciales incorrectas."));
+        }
     }
 
     /**
@@ -48,11 +61,15 @@ public class AuthController {
      * Creates a new user account.
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         try {
             AuthResponse response = authService.register(request);
+            audit.record("AUTH_REGISTER", "SUCCESS", response.getUsername(),
+                    httpRequest.getRemoteAddr(), "role=" + response.getRole());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
+            audit.record("AUTH_REGISTER", "FAILURE", request.getUsername(),
+                    httpRequest.getRemoteAddr(), "validation_rejected");
             return ResponseEntity.badRequest().body(
                     Map.of("error", e.getMessage())
             );
@@ -64,8 +81,11 @@ public class AuthController {
      * Clears the JWT cookie.
      */
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<?> logout(HttpServletRequest httpRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String actor = authentication != null ? authentication.getName() : "anonymous";
         ResponseCookie cookie = authService.logout();
+        audit.record("AUTH_LOGOUT", "SUCCESS", actor, httpRequest.getRemoteAddr(), "cookie_cleared");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -83,8 +103,7 @@ public class AuthController {
 
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication.getPrincipal().equals("anonymousUser")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "No autenticado"));
+            return ResponseEntity.noContent().build();
         }
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();

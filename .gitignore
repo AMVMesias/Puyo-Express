@@ -19,6 +19,7 @@ pnpm-debug.log*
 *.p12
 *.pfx
 secrets/
+docs/security/SERVER_HARDENING_REPORT.md
 *.secret
 *.secrets
 

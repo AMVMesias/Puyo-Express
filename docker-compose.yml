@@ -1,22 +1,100 @@
+name: puyo-express
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: puyo_express_db
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    expose:
+      - "5432"
     volumes:
       - puyo_pgdata:/var/lib/postgresql/data
+    secrets:
+      - postgres_password
+    networks:
+      - data_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JWT_SECURE_COOKIE: ${JWT_SECURE_COOKIE:-false}
+      CORS_ALLOWED_ORIGINS: ${APP_ORIGIN:-http://localhost:8088}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-1048576}
+      SERVER_ADDRESS: 0.0.0.0
+    expose:
+      - "8080"
+    secrets:
+      - postgres_password
+      - jwt_secret
+      - data_encryption_key
+    networks:
+      - data_net
+      - app_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 150
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+        VITE_GOOGLE_MAPS_API_KEY: ${API_MAPS_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8088}:8080"
+    networks:
+      - app_net
+    depends_on:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+      - /var/cache/nginx:size=32m,noexec,nosuid,nodev
+      - /var/run:size=2m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+
+networks:
+  app_net:
+    internal: false
+  data_net:
+    internal: true
 
 volumes:
   puyo_pgdata:
-    driver: local
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  data_encryption_key:
+    file: ./secrets/data_encryption_key.txt

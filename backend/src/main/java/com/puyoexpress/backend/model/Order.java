@@ -1,5 +1,6 @@
 package com.puyoexpress.backend.model;
 
+import com.puyoexpress.backend.security.SensitiveStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,6 +15,9 @@ public class Order {
 
     @Column(name = "restaurant_id")
     private Long restaurantId;
+
+    @Column(name = "customer_id")
+    private Long customerId;
     
     @Column(name = "restaurant_name")
     private String restaurantName;
@@ -21,7 +25,8 @@ public class Order {
     @Column(name = "customer_name")
     private String customerName;
     
-    @Column(name = "customer_phone")
+    @Column(name = "customer_phone", length = 512)
+    @Convert(converter = SensitiveStringConverter.class)
     private String customerPhone;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -37,7 +42,8 @@ public class Order {
     @Column(name = "distance_km")
     private Double distanceKm;
     
-    @Column(name = "delivery_address")
+    @Column(name = "delivery_address", length = 2048)
+    @Convert(converter = SensitiveStringConverter.class)
     private String deliveryAddress;
     
     @Column(name = "delivery_landmark_id")
@@ -70,6 +76,9 @@ public class Order {
 
     public Long getRestaurantId() { return restaurantId; }
     public void setRestaurantId(Long restaurantId) { this.restaurantId = restaurantId; }
+
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
 
     public String getRestaurantName() { return restaurantName; }
     public void setRestaurantName(String restaurantName) { this.restaurantName = restaurantName; }
