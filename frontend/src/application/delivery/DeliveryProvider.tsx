@@ -102,16 +102,14 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
         body: JSON.stringify({
           restaurantId: input.restaurantId,
-          restaurantName: input.restaurantName,
           customerName: input.customerName,
           customerPhone: input.customerPhone,
-          items: input.items,
+          items: input.items.map((orderItem) => ({
+            menuItemId: orderItem.item.id,
+            quantity: orderItem.quantity,
+          })),
           deliveryAddress: input.deliveryAddress,
           deliveryLandmarkId: input.landmarkId,
-          total: input.items.reduce((acc, curr) => acc + curr.item.price * curr.quantity, 0),
-          foodTotal: input.items.reduce((acc, curr) => acc + curr.item.price * curr.quantity, 0),
-          commission: 0,
-          distanceKm: 2.5
         }),
       });
       if (res.ok) {

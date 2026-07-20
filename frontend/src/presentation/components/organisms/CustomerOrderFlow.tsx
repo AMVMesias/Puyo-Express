@@ -46,6 +46,7 @@ export function CustomerOrderFlow() {
   const addToCart = (item: MenuItem) => {
     setCart((currentCart) => {
       const existingItem = currentCart.find((cartItem) => cartItem.item.id === item.id);
+      if (existingItem?.quantity === 50) return currentCart;
       if (!existingItem) return [...currentCart, { item, quantity: 1 }];
       return currentCart.map((cartItem) =>
         cartItem.item.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
@@ -257,10 +258,28 @@ export function CustomerOrderFlow() {
                   </option>
                 ))}
               </Select>
-              <Input label="Nombre" onChange={(event) => setCustomerName(event.target.value)} required value={customerName} />
-              <Input label="Teléfono" onChange={(event) => setCustomerPhone(event.target.value)} required value={customerPhone} />
+              <Input
+                label="Nombre"
+                maxLength={80}
+                minLength={2}
+                onChange={(event) => setCustomerName(event.target.value)}
+                pattern=".*[A-Za-zÁÉÍÓÚáéíóúÑñ].*"
+                required
+                value={customerName}
+              />
+              <Input
+                inputMode="tel"
+                label="Teléfono"
+                maxLength={16}
+                onChange={(event) => setCustomerPhone(event.target.value)}
+                pattern="\+?[0-9]{7,15}"
+                required
+                value={customerPhone}
+              />
               <Textarea
                 label="Dirección / referencia"
+                maxLength={300}
+                minLength={5}
                 onChange={(event) => setDeliveryAddress(event.target.value)}
                 required
                 rows={3}

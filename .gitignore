@@ -22,6 +22,8 @@ secrets/
 docs/security/SERVER_HARDENING_REPORT.md
 *.secret
 *.secrets
+secrets.zip
+*secrets*.zip
 
 # ===========================
 # Frontend

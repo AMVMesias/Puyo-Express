@@ -46,8 +46,8 @@ export interface Driver {
   vehicle: VehicleType;
   rating: number;
   status: DriverStatus;
-  totalEarnings: number;
-  completedDeliveries: number;
+  totalEarnings: number | null;
+  completedDeliveries: number | null;
   position: Coordinates;
 }
 

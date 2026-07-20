@@ -115,7 +115,8 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               onChange={(event) => setPassword(event.target.value)}
               required
               autoComplete="new-password"
-              minLength={8}
+              minLength={12}
+              maxLength={120}
               type="password"
               value={password}
             />

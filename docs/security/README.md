@@ -13,7 +13,7 @@ Este directorio reúne el estado de seguridad **realmente implementado y verific
 | Auditoría | Eventos de autenticación y solicitudes en `SECURITY_AUDIT`, sin cuerpos ni secretos |
 | Red | Solo frontend en `127.0.0.1:8088`; backend y PostgreSQL internos |
 | Contenedores | Usuario no root, filesystem de solo lectura, capacidades eliminadas y límites de procesos |
-| HTTP | CSP y cabeceras defensivas; versión de Nginx oculta; solicitudes limitadas a 1 MiB |
+| HTTP | Gateway mínimo sin banner `Server`; CSP y cabeceras defensivas; solicitudes limitadas a 1 MiB |
 | Host revisado | Firewall, Defender, SMBv1, sistema y puertos; BitLocker no verificado |
 | Producción externa | Pendiente TLS, cookie Secure, backups, centralización de logs y controles operativos |
 
@@ -33,4 +33,3 @@ Este directorio reúne el estado de seguridad **realmente implementado y verific
 - **Implementado local:** protege el despliegue actual en la máquina, pero necesita configuración adicional para exposición pública.
 - **No verificado:** el control puede existir en el host, pero no se obtuvo evidencia suficiente.
 - **Pendiente:** todavía requiere implementación; aparece para no confundir una recomendación con una protección activa.
-

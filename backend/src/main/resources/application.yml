@@ -22,6 +22,9 @@ server:
 # Database (PostgreSQL)
 # ===========================
 spring:
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   datasource:
     url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/${POSTGRES_DB:puyo_express_db}}
     username: ${POSTGRES_USER}
@@ -35,7 +38,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
     show-sql: false
     properties:
       hibernate:
@@ -56,6 +59,14 @@ app:
 
   http:
     max-request-bytes: ${MAX_REQUEST_BYTES:1048576}
+
+  bootstrap:
+    restaurant-owner:
+      enabled: ${BOOTSTRAP_RESTAURANT_ENABLED:false}
+      username: ${BOOTSTRAP_RESTAURANT_USERNAME:}
+      email: ${BOOTSTRAP_RESTAURANT_EMAIL:}
+      password: ${BOOTSTRAP_RESTAURANT_PASSWORD:}
+      restaurant-name: ${BOOTSTRAP_RESTAURANT_NAME:}
 
 # ===========================
 # CORS

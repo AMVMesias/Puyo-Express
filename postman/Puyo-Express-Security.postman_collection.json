@@ -1,0 +1,972 @@
+{
+  "info": {
+    "_postman_id": "7460d15c-5117-4caf-b686-58769c6910ad",
+    "name": "Puyo Express - Flujo completo y seguridad",
+    "description": "Ejecuta las carpetas en orden. Antes de iniciar, pega en la variable restaurantPassword el contenido de secrets/restaurant_owner_password.txt. La colección registra usuarios de prueba únicos, conserva automáticamente la cookie HttpOnly y captura todos los IDs necesarios.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8088/api"
+    },
+    {
+      "key": "restaurantUsername",
+      "value": "restaurante"
+    },
+    {
+      "key": "restaurantPassword",
+      "value": ""
+    },
+    {
+      "key": "testPassword",
+      "value": "Postman-Test-2026!"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "customerUsername",
+      "value": ""
+    },
+    {
+      "key": "customerEmail",
+      "value": ""
+    },
+    {
+      "key": "driverUsername",
+      "value": ""
+    },
+    {
+      "key": "driverEmail",
+      "value": ""
+    },
+    {
+      "key": "restaurantId",
+      "value": ""
+    },
+    {
+      "key": "menuItemId",
+      "value": ""
+    },
+    {
+      "key": "landmarkId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "driverId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Preparación y ataques negativos",
+      "item": [
+        {
+          "name": "00 - Inicializar ejecución y limpiar sesión",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = Date.now().toString();",
+                  "pm.collectionVariables.set('runId', runId);",
+                  "pm.collectionVariables.set('customerUsername', `ClientePm${runId}`);",
+                  "pm.collectionVariables.set('customerEmail', `cliente.pm.${runId}@example.test`);",
+                  "pm.collectionVariables.set('driverUsername', `DriverPm${runId}`);",
+                  "pm.collectionVariables.set('driverEmail', `driver.pm.${runId}@example.test`);",
+                  "['restaurantId', 'menuItemId', 'landmarkId', 'orderId', 'driverId'].forEach((key) => pm.collectionVariables.unset(key));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La sesión previa queda eliminada', () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Genera nombres únicos para esta ejecución y elimina cualquier cookie de una ejecución anterior."
+          }
+        },
+        {
+          "name": "01 - Intento de inyección SQL en login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La inyección no autentica', () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"' OR '1'='1\",\"password\":\"cualquier-cosa\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "02 - Registro con usuario solo numérico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El nombre numérico es rechazado', () => pm.expect(pm.response.code).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"999999999999\",\"email\":\"numerico.{{runId}}@example.test\",\"password\":\"{{testPassword}}\",\"role\":\"CUSTOMER\"}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "03 - Mutación desde origen malicioso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El origen externo es rechazado', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://attacker.example"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"Blocked{{runId}}\",\"email\":\"blocked.{{runId}}@example.test\",\"password\":\"{{testPassword}}\",\"role\":\"CUSTOMER\"}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Cliente crea el pedido",
+      "item": [
+        {
+          "name": "01 - Registrar cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cliente creado', () => pm.expect(pm.response.code).to.eql(201));",
+                  "pm.test('El registro no devuelve token', () => pm.expect(pm.response.text()).not.to.include('puyo_jwt'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{customerUsername}}\",\"email\":\"{{customerEmail}}\",\"password\":\"{{testPassword}}\",\"role\":\"CUSTOMER\"}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "02 - Login cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login correcto', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Rol de cliente', () => pm.expect(pm.response.json().role).to.eql('ROLE_CUSTOMER'));",
+                  "pm.test('Cookie HttpOnly y SameSite Strict', () => {",
+                  "  const cookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "  pm.expect(cookie).to.include('HttpOnly');",
+                  "  pm.expect(cookie).to.include('SameSite=Strict');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{customerUsername}}\",\"password\":\"{{testPassword}}\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "03 - Obtener restaurante y producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Catálogo disponible', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const restaurants = pm.response.json();",
+                  "pm.test('Existe al menos un restaurante con menú', () => pm.expect(restaurants.some((r) => r.menu && r.menu.length > 0)).to.eql(true));",
+                  "const restaurant = restaurants.find((r) => r.menu && r.menu.length > 0);",
+                  "pm.collectionVariables.set('restaurantId', restaurant.id);",
+                  "pm.collectionVariables.set('menuItemId', restaurant.menu[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/restaurants"
+          }
+        },
+        {
+          "name": "04 - Obtener punto de entrega",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Puntos disponibles', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const landmarks = pm.response.json();",
+                  "pm.test('Existe un punto de entrega', () => pm.expect(landmarks.length).to.be.above(0));",
+                  "pm.collectionVariables.set('landmarkId', landmarks[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/landmarks"
+          }
+        },
+        {
+          "name": "05 - Cantidad extrema rechazada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La cantidad extrema se rechaza', () => pm.expect(pm.response.code).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"restaurantId\":{{restaurantId}},\"customerName\":\"Cliente Postman\",\"customerPhone\":\"0981234567\",\"deliveryAddress\":\"Entrada principal del parque\",\"deliveryLandmarkId\":{{landmarkId}},\"items\":[{\"menuItemId\":{{menuItemId}},\"quantity\":2147483647}]}"
+            },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "06 - Campo de asignación masiva rechazado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La propiedad desconocida se rechaza', () => pm.expect(pm.response.code).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"restaurantId\":{{restaurantId}},\"customerName\":\"Cliente Postman\",\"customerPhone\":\"0981234567\",\"deliveryAddress\":\"Entrada principal del parque\",\"deliveryLandmarkId\":{{landmarkId}},\"items\":[{\"menuItemId\":{{menuItemId}},\"quantity\":1}],\"status\":\"delivered\",\"total\":0}"
+            },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "07 - Crear pedido válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido creado', () => pm.expect(pm.response.code).to.eql(201));",
+                  "const order = pm.response.json();",
+                  "pm.test('El servidor calcula un total positivo', () => pm.expect(order.total).to.be.above(0));",
+                  "pm.test('El estado inicial es pending', () => pm.expect(order.status).to.eql('pending'));",
+                  "pm.collectionVariables.set('orderId', order.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"restaurantId\":{{restaurantId}},\"customerName\":\"Cliente Postman\",\"customerPhone\":\"0981234567\",\"deliveryAddress\":\"Entrada principal del parque\",\"deliveryLandmarkId\":{{landmarkId}},\"items\":[{\"menuItemId\":{{menuItemId}},\"quantity\":2}]}"
+            },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "08 - Cliente consulta solo sus pedidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consulta correcta', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const orders = pm.response.json();",
+                  "pm.test('El pedido creado está visible', () => pm.expect(orders.some((o) => String(o.id) === String(pm.collectionVariables.get('orderId')))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "09 - Cliente no puede aceptar pedidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Control de rol aplicado', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"accepted\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Restaurante prepara el pedido",
+      "item": [
+        {
+          "name": "01 - Login restaurante",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('restaurantPassword')) {",
+                  "  throw new Error('Configura restaurantPassword con el contenido de secrets/restaurant_owner_password.txt');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de restaurante correcto', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Rol de restaurante', () => pm.expect(pm.response.json().role).to.eql('ROLE_RESTAURANT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{restaurantUsername}}\",\"password\":\"{{restaurantPassword}}\"}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Antes de ejecutar, pega en restaurantPassword el contenido de secrets/restaurant_owner_password.txt."
+          }
+        },
+        {
+          "name": "02 - Consultar restaurante propio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solo se devuelve el restaurante propio', () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(pm.response.json()).to.have.length(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/restaurants"
+          }
+        },
+        {
+          "name": "03 - Consultar pedidos del restaurante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido disponible para su restaurante', () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(pm.response.json().some((o) => String(o.id) === String(pm.collectionVariables.get('orderId')))).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "04 - Aceptar pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido aceptado', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('accepted'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"accepted\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "05 - Marcar preparando",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido en preparación', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('preparing'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"preparing\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "06 - Marcar listo para retiro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido listo', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('ready_for_pickup'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ready_for_pickup\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Repartidor entrega el pedido",
+      "item": [
+        {
+          "name": "01 - Registrar repartidor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Repartidor creado', () => pm.expect(pm.response.code).to.eql(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{driverUsername}}\",\"email\":\"{{driverEmail}}\",\"password\":\"{{testPassword}}\",\"role\":\"DRIVER\"}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "02 - Login repartidor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login de repartidor correcto', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Rol de repartidor', () => pm.expect(pm.response.json().role).to.eql('ROLE_DRIVER'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{driverUsername}}\",\"password\":\"{{testPassword}}\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "03 - Obtener perfil y capturar driverId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solo devuelve el perfil propio', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json()).to.have.length(1); });",
+                  "pm.collectionVariables.set('driverId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/drivers"
+          }
+        },
+        {
+          "name": "04 - Activar repartidor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Repartidor activo', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('active'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"active\"}"
+            },
+            "url": "{{baseUrl}}/drivers/{{driverId}}/status"
+          }
+        },
+        {
+          "name": "05 - Ver pedido disponible sin PII",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listado correcto', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const order = pm.response.json().find((o) => String(o.id) === String(pm.collectionVariables.get('orderId')));",
+                  "pm.test('Pedido disponible visible', () => pm.expect(order).to.be.an('object'));",
+                  "pm.test('PII oculta antes de asignación', () => { pm.expect(order.customerName).to.eql(null); pm.expect(order.customerPhone).to.eql(null); pm.expect(order.deliveryAddress).to.eql(null); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "06 - Aceptar viaje con perfil propio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido asignado al repartidor', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(String(pm.response.json().driverId)).to.eql(String(pm.collectionVariables.get('driverId'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"driverId\":{{driverId}}}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/assign-driver"
+          }
+        },
+        {
+          "name": "07 - Recoger pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido recogido', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('picked_up'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"picked_up\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "08 - Entregar pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido entregado', () => { pm.expect(pm.response.code).to.eql(200); pm.expect(pm.response.json().status).to.eql('delivered'); pm.expect(pm.response.json().routeProgress).to.eql(100); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"delivered\"}"
+            },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "09 - Confirmar historial propio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pedido entregado en historial', () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  const order = pm.response.json().find((o) => String(o.id) === String(pm.collectionVariables.get('orderId')));",
+                  "  pm.expect(order.status).to.eql('delivered');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        }
+      ]
+    },
+    {
+      "name": "99 - Prueba manual de rate limiting",
+      "description": "Ejecuta esta solicitud manualmente 11 veces. Debe comenzar devolviendo 401 y terminar devolviendo 429. Hazla al final porque bloqueará temporalmente el login para tu IP.",
+      "item": [
+        {
+          "name": "Login inválido - repetir 11 veces",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Respuesta esperada de credenciales o límite', () => pm.expect([401, 429]).to.include(pm.response.code));",
+                  "if (pm.response.code === 429) console.log('Rate limiting confirmado.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:8088"
+              },
+              {
+                "key": "X-Forwarded-For",
+                "value": "198.51.100.77"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"no-existe\",\"password\":\"incorrecta-segura\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    }
+  ]
+}

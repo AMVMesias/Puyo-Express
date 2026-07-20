@@ -23,4 +23,5 @@ function Write-Secret([string]$name, [int]$byteCount) {
 Write-Secret 'postgres_password.txt' 36
 Write-Secret 'jwt_secret.txt' 32
 Write-Secret 'data_encryption_key.txt' 32
+Write-Secret 'restaurant_owner_password.txt' 24
 Write-Host 'Secretos listos en secrets/ (directorio excluido de Git).'

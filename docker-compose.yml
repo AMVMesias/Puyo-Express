@@ -36,6 +36,11 @@ services:
       JWT_SECURE_COOKIE: ${JWT_SECURE_COOKIE:-false}
       CORS_ALLOWED_ORIGINS: ${APP_ORIGIN:-http://localhost:8088}
       MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-1048576}
+      HIBERNATE_DDL_AUTO: ${HIBERNATE_DDL_AUTO:-update}
+      BOOTSTRAP_RESTAURANT_ENABLED: ${BOOTSTRAP_RESTAURANT_ENABLED:-true}
+      BOOTSTRAP_RESTAURANT_USERNAME: ${BOOTSTRAP_RESTAURANT_USERNAME:-restaurante}
+      BOOTSTRAP_RESTAURANT_EMAIL: ${BOOTSTRAP_RESTAURANT_EMAIL:-restaurante@puyoexpress.local}
+      BOOTSTRAP_RESTAURANT_NAME: ${BOOTSTRAP_RESTAURANT_NAME:-Restaurante Puyo Express}
       SERVER_ADDRESS: 0.0.0.0
     expose:
       - "8080"
@@ -43,6 +48,7 @@ services:
       - postgres_password
       - jwt_secret
       - data_encryption_key
+      - restaurant_owner_password
     networks:
       - data_net
       - app_net
@@ -73,8 +79,6 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid,nodev
-      - /var/cache/nginx:size=32m,noexec,nosuid,nodev
-      - /var/run:size=2m,noexec,nosuid,nodev
     cap_drop:
       - ALL
     security_opt:
@@ -97,3 +101,5 @@ secrets:
     file: ./secrets/jwt_secret.txt
   data_encryption_key:
     file: ./secrets/data_encryption_key.txt
+  restaurant_owner_password:
+    file: ./secrets/restaurant_owner_password.txt

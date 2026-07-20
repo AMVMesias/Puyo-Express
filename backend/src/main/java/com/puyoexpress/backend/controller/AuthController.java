@@ -71,7 +71,7 @@ public class AuthController {
             audit.record("AUTH_REGISTER", "FAILURE", request.getUsername(),
                     httpRequest.getRemoteAddr(), "validation_rejected");
             return ResponseEntity.badRequest().body(
-                    Map.of("error", e.getMessage())
+                    Map.of("error", "No fue posible completar el registro con esos datos.")
             );
         }
     }

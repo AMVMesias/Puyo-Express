@@ -94,6 +94,7 @@ export function LoginPage({ onNavigateToRegister }: { onNavigateToRegister: () =
               label="Usuario"
               onChange={(event) => setUsername(event.target.value)}
               required
+              maxLength={100}
               type="text"
               value={username}
             />
@@ -102,6 +103,7 @@ export function LoginPage({ onNavigateToRegister }: { onNavigateToRegister: () =
               label="Contraseña"
               onChange={(event) => setPassword(event.target.value)}
               required
+              maxLength={120}
               type="password"
               value={password}
             />

@@ -1,6 +1,7 @@
 package com.puyoexpress.backend.controller;
 
 import com.puyoexpress.backend.model.Driver;
+import com.puyoexpress.backend.dto.DriverResponse;
 import com.puyoexpress.backend.repository.DriverRepository;
 import com.puyoexpress.backend.security.UserDetailsImpl;
 import org.springframework.http.HttpStatus;
@@ -23,8 +24,21 @@ public class DriverController {
     }
 
     @GetMapping
-    public List<Driver> getAllDrivers() {
-        return repository.findAll();
+    public List<DriverResponse> getAllDrivers(Authentication authentication) {
+        Long currentUserId = ((UserDetailsImpl) authentication.getPrincipal()).getId();
+        boolean isDriver = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_DRIVER"));
+        boolean isRestaurant = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_RESTAURANT"));
+        if (!isDriver && !isRestaurant) {
+            return List.of();
+        }
+        return repository.findAll().stream()
+                .filter(driver -> !isDriver
+                        || (driver.getUserId() != null && driver.getUserId().equals(currentUserId)))
+                .map(driver -> DriverResponse.from(driver,
+                        isDriver && driver.getUserId() != null && driver.getUserId().equals(currentUserId)))
+                .toList();
     }
     
     @PutMapping("/{id}/status")

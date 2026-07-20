@@ -23,8 +23,15 @@ El mapa usa Leaflet y OpenStreetMap; no necesita clave API ni cuenta de facturac
 - [Modelo de amenazas y riesgos pendientes](docs/security/THREAT_MODEL.md)
 - [Operación segura y respuesta a incidentes](docs/security/SECURITY_OPERATIONS.md)
 - [Guía de verificación técnica](docs/security/SECURITY_VERIFICATION.md)
+- [Informe de auditoría de la aplicación](docs/security/SECURITY_AUDIT_REPORT.md)
+- [Correcciones aplicadas y operación pendiente](docs/security/SECURITY_REMEDIATION.md)
+- [Colección Postman y guía de ejecución](docs/security/POSTMAN_TESTING.md)
 - [Informe de hardening del host](docs/security/SERVER_HARDENING_REPORT.md)
 
 Para el despliegue Docker endurecido, crea `.env` desde `.env.example`, ejecuta `scripts/initialize-secrets.ps1` y luego `docker compose up --build -d`.
+
+El usuario local del restaurante se configura con
+`BOOTSTRAP_RESTAURANT_USERNAME` (por defecto `restaurante`). Su contraseña se
+encuentra en `secrets/restaurant_owner_password.txt`; no se guarda en `.env`.
 
 El Compose actual es un despliegue local: publica únicamente `127.0.0.1:8088`. Antes de exponerlo a Internet se requiere TLS, cookie Secure y completar los controles pendientes descritos en la documentación.

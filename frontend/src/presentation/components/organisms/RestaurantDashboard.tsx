@@ -161,8 +161,10 @@ export function RestaurantDashboard() {
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500">
                 <span>⭐ {driver.rating}</span>
-                <span>{driver.completedDeliveries} envíos</span>
-                <strong className="text-emerald-700">${driver.totalEarnings.toFixed(2)}</strong>
+                <span>{driver.completedDeliveries ?? '—'} envíos</span>
+                <strong className="text-emerald-700">
+                  {driver.totalEarnings == null ? 'Privado' : `$${driver.totalEarnings.toFixed(2)}`}
+                </strong>
               </div>
             </Card>
           ))}

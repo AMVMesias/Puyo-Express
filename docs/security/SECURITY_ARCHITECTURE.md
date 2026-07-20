@@ -7,7 +7,7 @@ Navegador
    |
    | HTTP local 127.0.0.1:8088
    v
-Frontend Nginx (único puerto publicado)
+Gateway web mínimo (único puerto publicado)
    |
    | red Docker app_net
    v
@@ -21,7 +21,10 @@ Docker secrets ---> Backend (JWT, AES y contraseña de BD)
 Backend stdout ---> logs de aplicación y SECURITY_AUDIT
 ```
 
-El navegador no accede directamente al backend ni a PostgreSQL. Nginx sirve el frontend y reenvía `/api`; Docker mantiene la red de datos como interna. El despliegue actual solo escucha en loopback, por lo que no es un despliegue público.
+El navegador no accede directamente al backend ni a PostgreSQL. Un gateway
+estático mínimo sirve el frontend y reenvía `/api`; Docker mantiene la red de
+datos como interna. El despliegue actual solo escucha en loopback, por lo que no
+es un despliegue público.
 
 ## Autenticación y autorización
 
@@ -44,7 +47,11 @@ La cookie usa `Secure=false` únicamente en el entorno HTTP local. En producció
 
 ## Defensa HTTP
 
-Nginx y Spring aplican controles complementarios: CSP, protección contra MIME sniffing y framing, política de referente, permisos del navegador, CORS restringido y respuestas de error sin trazas. Nginx oculta su número de versión y la cabecera del backend. Ambos niveles limitan las solicitudes a 1 MiB.
+El gateway y Spring aplican controles complementarios: CSP, protección contra
+MIME sniffing y framing, política de referente, permisos del navegador, CORS
+restringido y respuestas de error sin trazas. El gateway no emite cabecera
+`Server` ni `X-Powered-By` y elimina esos banners del backend. Ambos niveles
+limitan las solicitudes a 1 MiB.
 
 ## Aislamiento de ejecución
 

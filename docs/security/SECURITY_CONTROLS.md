@@ -19,7 +19,7 @@ Fecha de revisión: 2026-07-14.
 | DAT-06 | Backups cifrados y restaurados | Procedimiento recomendado, sin automatización ni evidencia de restauración | Pendiente |
 | API-01 | Validación de entradas | Bean Validation en autenticación/registro y validaciones de dominio | Implementado |
 | API-02 | Cálculo autoritativo | Backend recalcula precios, comisión y distancia; no confía en importes del cliente | Implementado |
-| API-03 | Límite de solicitud | 1 MiB en Nginx y backend; devuelve 413 | Implementado |
+| API-03 | Límite de solicitud | 1 MiB en gateway y backend; devuelve 413 | Implementado |
 | API-04 | Errores seguros | Sin stack traces ni detalles internos en respuestas de producción | Implementado |
 | API-05 | CORS | Orígenes, métodos y cabeceras explícitos; credenciales controladas | Implementado |
 | API-06 | CSRF | Desactivado; mitigación parcial por SameSite=Lax, CORS y proxy mismo origen | Riesgo aceptado local |

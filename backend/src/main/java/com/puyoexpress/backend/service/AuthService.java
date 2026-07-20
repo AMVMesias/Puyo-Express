@@ -50,9 +50,10 @@ public class AuthService {
     public record LoginResult(AuthResponse response, ResponseCookie cookie) {}
 
     public LoginResult login(LoginRequest request) {
+        String usernameOrEmail = request.getUsername().trim();
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        usernameOrEmail,
                         request.getPassword()
                 )
         );
@@ -78,8 +79,13 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        String username = request.getUsername().trim();
+        String username = InputPolicy.normalizeHumanText(request.getUsername());
         String email = request.getEmail().trim().toLowerCase();
+
+        if (InputPolicy.containsUnsafeControlCharacters(username)
+                || InputPolicy.containsUnsafeControlCharacters(email)) {
+            throw new IllegalArgumentException("Los datos contienen caracteres no permitidos.");
+        }
 
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("El nombre de usuario ya está en uso.");

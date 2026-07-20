@@ -39,7 +39,9 @@ curl.exe -I http://localhost:8088/
 curl.exe -i http://localhost:8088/api/auth/me
 ```
 
-Debe observarse CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` y `Permissions-Policy`. Si aparece `Server`, no debe contener una versión. Nginx oculta la cabecera del backend y tiene `server_tokens off`.
+Debe observarse CSP, `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy` y `Permissions-Policy`. No deben aparecer `Server` ni
+`X-Powered-By`.
 
 ## 4. Verificar el límite de 1 MiB
 
@@ -49,7 +51,8 @@ $response = Invoke-WebRequest http://localhost:8088/api/auth/login -Method POST 
 $response.StatusCode
 ```
 
-El resultado esperado es `413`. El límite existe tanto en Nginx como en el filtro del backend y puede ajustarse con `MAX_REQUEST_BYTES`.
+El resultado esperado es `413`. El límite existe tanto en el gateway como en el
+filtro del backend y puede ajustarse con `MAX_REQUEST_BYTES`.
 
 ## 5. Verificar cifrado en PostgreSQL
 

@@ -62,9 +62,9 @@ export function DriverDashboard() {
 
       {currentDriver && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <MetricTile icon={<Wallet className="h-4 w-4" />} label="Billetera" tone="emerald" value={`$${currentDriver.totalEarnings.toFixed(2)}`} />
+          <MetricTile icon={<Wallet className="h-4 w-4" />} label="Billetera" tone="emerald" value={`$${(currentDriver.totalEarnings ?? 0).toFixed(2)}`} />
           <MetricTile label="Calificación" tone="amber" value={`⭐ ${currentDriver.rating}`} />
-          <MetricTile icon={<Bike className="h-4 w-4" />} label="Envíos" value={String(currentDriver.completedDeliveries)} />
+          <MetricTile icon={<Bike className="h-4 w-4" />} label="Envíos" value={String(currentDriver.completedDeliveries ?? 0)} />
         </div>
       )}
 

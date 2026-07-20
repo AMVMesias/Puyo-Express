@@ -4,6 +4,8 @@ import com.puyoexpress.backend.security.JwtAuthFilter;
 import com.puyoexpress.backend.security.AuditLogFilter;
 import com.puyoexpress.backend.security.RequestSizeLimitFilter;
 import com.puyoexpress.backend.security.UserDetailsServiceImpl;
+import com.puyoexpress.backend.security.AuthRateLimitFilter;
+import com.puyoexpress.backend.security.OriginValidationFilter;
 import com.puyoexpress.backend.service.SecurityAuditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +29,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Main Spring Security configuration.
@@ -36,7 +40,7 @@ import java.util.List;
  * - Stateless sessions (JWT-based)
  * - BCrypt password hashing
  * - CORS restricted to frontend origins
- * - CSRF disabled (stateless API with HttpOnly cookies + SameSite=Lax)
+ * - Browser CSRF protection through strict Origin validation and SameSite cookies
  * - Role-based endpoint access control
  * - JWT filter before UsernamePasswordAuthenticationFilter
  */
@@ -83,6 +87,16 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthRateLimitFilter authRateLimitFilter() {
+        return new AuthRateLimitFilter(10, 15 * 60 * 1000L);
+    }
+
+    @Bean
+    public OriginValidationFilter originValidationFilter() {
+        return new OriginValidationFilter(configuredOrigins());
+    }
+
+    @Bean
     public AuditLogFilter auditLogFilter(SecurityAuditService auditService) {
         return new AuditLogFilter(auditService);
     }
@@ -90,7 +104,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        configuration.setAllowedOrigins(List.copyOf(configuredOrigins()));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Content-Type", "Accept", "X-Request-ID"));
         configuration.setAllowCredentials(true); // Required for HttpOnly cookies
@@ -104,12 +118,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            RequestSizeLimitFilter requestSizeLimitFilter,
-                                           AuditLogFilter auditLogFilter) throws Exception {
+                                           AuditLogFilter auditLogFilter,
+                                           AuthRateLimitFilter authRateLimitFilter,
+                                           OriginValidationFilter originValidationFilter) throws Exception {
         http
             // CORS configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Disable CSRF — we use stateless JWT in HttpOnly cookies with SameSite=Lax
+            // Browser CSRF is rejected by strict Origin validation and SameSite cookies.
             .csrf(csrf -> csrf.disable())
 
             // Stateless session management (no server-side sessions)
@@ -124,6 +140,10 @@ public class SecurityConfig {
                     .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
                 .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
                     "camera=(), microphone=(), geolocation=(), payment=()"))
+                .addHeaderWriter(new StaticHeadersWriter("Cache-Control", "no-store"))
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000))
                 .contentSecurityPolicy(csp -> csp
                     .policyDirectives("default-src 'none'; frame-ancestors 'none'"))
             )
@@ -135,10 +155,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // Role-specific endpoints
-                .requestMatchers("/api/customer/**").hasAuthority("ROLE_CUSTOMER")
-                .requestMatchers("/api/restaurant/**").hasAuthority("ROLE_RESTAURANT")
-                .requestMatchers("/api/driver/**").hasAuthority("ROLE_DRIVER")
-
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
@@ -149,8 +165,27 @@ public class SecurityConfig {
             // Add JWT filter before the default authentication filter
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(requestSizeLimitFilter, JwtAuthFilter.class)
+            .addFilterAfter(originValidationFilter, RequestSizeLimitFilter.class)
+            .addFilterAfter(authRateLimitFilter, OriginValidationFilter.class)
             .addFilterAfter(auditLogFilter, JwtAuthFilter.class);
 
         return http.build();
+    }
+
+    private Set<String> configuredOrigins() {
+        Set<String> origins = new LinkedHashSet<>();
+        Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .forEach(origin -> {
+                    if ("*".equals(origin) || (!origin.startsWith("http://") && !origin.startsWith("https://"))) {
+                        throw new IllegalStateException("CORS_ALLOWED_ORIGINS contiene un origen no permitido.");
+                    }
+                    origins.add(origin);
+                });
+        if (origins.isEmpty()) {
+            throw new IllegalStateException("CORS_ALLOWED_ORIGINS debe contener al menos un origen.");
+        }
+        return origins;
     }
 }

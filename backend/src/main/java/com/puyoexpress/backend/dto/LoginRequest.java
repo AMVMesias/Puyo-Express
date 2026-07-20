@@ -1,6 +1,7 @@
 package com.puyoexpress.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * DTO for login requests. Accepts either username or email in the 'username' field.
@@ -8,9 +9,11 @@ import jakarta.validation.constraints.NotBlank;
 public class LoginRequest {
 
     @NotBlank(message = "El usuario o correo es obligatorio")
+    @Size(max = 100, message = "El usuario o correo es demasiado largo")
     private String username;
 
     @NotBlank(message = "La contraseña es obligatoria")
+    @Size(max = 120, message = "La contraseña es demasiado larga")
     private String password;
 
     public LoginRequest() {
