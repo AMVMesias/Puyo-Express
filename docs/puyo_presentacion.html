@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Puyo Express - DevSecOps (21 Slides)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  
+  html,body { width:100%; height:100%; background:#07130F; overflow:hidden; font-family:'Segoe UI',system-ui,sans-serif; color:#ECFDF5; }
+
+  /* Escenario 16:9 escalado a viewport */
+  #stage {
+    position:absolute;
+    width:1920px; height:1080px;
+    transform-origin:top left; /* CORRECCIÓN: Para que la matemática de centrado funcione perfectamente */
+    background:radial-gradient(ellipse at center, #022C22 0%, #07130F 60%, #000 100%);
+    overflow:hidden;
+  }
+
+  /* Fondo decorativo (canvas) */
+  #bgCanvas { position:absolute; inset:0; z-index:0; opacity: 0.6; }
+
+  /* Header fijo */
+  .topbar {
+    position:absolute; top:0; left:0; width:100%; padding:30px 60px;
+    display:flex; justify-content:space-between; align-items:center;
+    z-index:100; font-size:18px; letter-spacing:2px; text-transform:uppercase;
+    color:#FCD34D;
+  }
+  .brand { font-weight:800; color:#ECFDF5; }
+  .brand span { color:#10B981; }
+  .pageno { font-variant-numeric:tabular-nums; color: #A7F3D0; }
+  .pageno #cur { color: #FCD34D; font-weight: 700; }
+  .total-pages { font-size: 14px; }
+
+  /* Slides */
+  .slide {
+    position:absolute; inset:0; z-index:1;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    text-align:center; padding:120px;
+    opacity:0; visibility:hidden;
+  }
+
+  /* Generic Animations */
+  /* GSAP from() manejará opacidad nativa a 1 */
+  
+  /* Generic Typography & Layouts */
+  .slide h2 { font-size:75px; font-weight:800; margin-bottom:50px; color:#ECFDF5; }
+  .sec-card { 
+    padding:40px; border-radius:20px; background:#022C22;
+    border-left: 8px solid #10B981; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    font-size: 24px; line-height: 1.6; color: #D1FAE5; text-align: left;
+  }
+  .sec-card h3 { font-size: 32px; color: #FCD34D; margin-bottom: 20px; }
+  .sec-card p { margin-bottom: 20px; }
+  .sec-card p strong { color: #FCD34D; }
+  .sec-card p:last-child { margin-bottom: 0; }
+  
+  .code-block { 
+    background: #064E3B; padding: 20px; border-radius: 10px; font-family: monospace;
+    font-size: 18px; color: #D1FAE5; border: 1px solid #047857; margin-top: 20px;
+  }
+  .code-block span.kw { color: #6EE7B7; font-weight: bold; }
+  .code-block span.str { color: #FCD34D; }
+
+  /* Slide 1 - Intro */
+  #s1 .kicker { font-size:24px; letter-spacing:10px; color:#FCD34D; margin-bottom:30px; font-weight: 600; }
+  #s1 h1 {
+    font-size:140px; font-weight:900; line-height:1.1;
+    background:linear-gradient(180deg, #ECFDF5 0%, #10B981 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    letter-spacing:-3px;
+  }
+  #s1 .sub { font-size:36px; margin-top:30px; color:#D1FAE5; font-weight:300; max-width: 1000px; line-height: 1.4;}
+  #s1 .shield {
+    position:absolute; bottom:-150px; right:-150px;
+    width:600px; height:600px; border-radius:30%;
+    background:radial-gradient(circle at 30% 30%, #10B981, #059669 60%, #047857 100%);
+    box-shadow:inset -40px -40px 120px rgba(0,0,0,.7), 0 0 160px rgba(16,185,129,.5);
+    transform: rotate(15deg);
+  }
+
+  /* Equipo Grid */
+  .team-grid { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; max-width: 1200px; }
+  .team-card { background: #022C22; border: 2px solid #10B981; padding: 25px 50px; border-radius: 10px; font-size: 26px; color: #FCD34D; font-weight: bold; }
+
+  /* Arquitectura grid simple */
+  .arch-grid { display:flex; gap:30px; align-items:center; justify-content:center; flex-wrap: wrap;}
+  .arch-node { 
+    width:280px; padding:35px; border-radius:20px;
+    background:linear-gradient(160deg, rgba(16,185,129,.15), rgba(0,0,0,.3));
+    border:2px solid rgba(16,185,129,.4); position: relative;
+  }
+  .arch-node .title { font-size:28px; font-weight:800; color:#10B981; margin-bottom:15px; }
+  .arch-node .desc { font-size:18px; color:#ECFDF5; line-height: 1.4; }
+  .arch-arrow { font-size: 40px; color: #FCD34D; }
+
+  /* Tables */
+  .api-table { width: 1200px; border-collapse: collapse; font-size: 22px; text-align: left; }
+  .api-table th { background: #10B981; color: #07130F; padding: 18px; font-weight: 800; text-transform: uppercase; }
+  .api-table td { padding: 18px; border-bottom: 1px solid rgba(16,185,129,0.3); background: rgba(0,0,0,0.4); color: #D1FAE5;}
+  .api-table tr:last-child td { border-bottom: none; }
+  .method { font-weight: bold; color: #FCD34D; }
+
+  /* === Diagrama de Arquitectura Detallado (S6) === */
+  .diag-container { position: relative; width: 1400px; height: 550px; margin: 0 auto; font-family: sans-serif; }
+  .diag-node {
+    position: absolute; width: 280px; padding: 25px; border-radius: 12px;
+    background: #022C22; border: 3px solid #10B981; color: #ECFDF5;
+    text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 10;
+  }
+  .diag-node .title { font-size: 22px; font-weight: 800; color: #10B981; margin-bottom: 5px; }
+  .diag-node .desc { font-size: 16px; color: #ECFDF5; font-weight: 600; }
+  
+  .node-client { top: 60px; left: 0px; background: #064E3B; border: none; }
+  .node-proxy { top: 60px; left: 550px; }
+  .node-backend { top: 350px; left: 550px; }
+  .node-db { top: 330px; left: 1050px; background: #047857; border-color: #064E3B; border-radius: 60px; padding: 35px 25px; }
+  .node-db .title, .node-db .desc { color: #ECFDF5; }
+  
+  .diag-arrow {
+    position: absolute; color: #10B981; font-size: 40px; font-weight: bold;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5;
+  }
+  .diag-arrow .arr-text { font-size: 14px; color: #FCD34D; line-height: 1.3; text-align: center; font-weight: normal; margin-top: -5px; }
+  
+  .arr-1 { top: 80px; left: 290px; width: 250px; } /* Client -> Proxy */
+  .arr-2 { top: 180px; left: 550px; width: 280px; } /* Proxy -> Backend */
+  .arr-2 .arr-text { margin-top: -15px; }
+  .arr-3 { top: 370px; left: 840px; width: 200px; } /* Backend -> DB */
+  
+  .diag-boundary {
+    position: absolute; border-radius: 12px; z-index: 1; border-width: 3px; border-style: dotted; background: rgba(0,0,0,0.2);
+  }
+  .diag-boundary .b-label { position: absolute; font-size: 14px; font-weight: bold; width: 100%; text-align: center; }
+  
+  .b-appnet { top: 20px; left: 510px; width: 360px; height: 470px; border-color: #3B82F6; }
+  .b-appnet .b-label { bottom: -30px; color: #3B82F6; }
+  
+  .b-datanet { top: 290px; left: 1010px; width: 360px; height: 200px; border-color: #3B82F6; }
+  .b-datanet .b-label { top: -30px; color: #3B82F6; }
+  
+  .b-global { top: -20px; left: 470px; width: 940px; height: 550px; border-color: #EF4444; border-style: dashed; background: transparent; }
+  .b-global .b-label { top: -30px; color: #EF4444; font-size: 18px; }
+
+  /* Slide 21 - Conclusion / CTA */
+  #s21 .kicker { font-size:24px; letter-spacing:8px; color:#FCD34D; margin-bottom:30px; }
+  #s21 h2 { font-size:140px; font-weight:900; line-height:1;
+    background:linear-gradient(90deg,#ECFDF5,#10B981,#FCD34D);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #s21 .tagline { font-size:36px; margin-top:40px; color:#D1FAE5; font-weight:300; max-width: 1000px; line-height:1.5;}
+  #s21 .halo { position:absolute; width:1200px; height:1200px; border-radius:50%;
+    background:radial-gradient(circle, rgba(16,185,129,.15) 0%, transparent 60%);
+    z-index:-1;
+  }
+  .cta-btn { margin-top:80px; padding:24px 60px; font-size:28px; font-weight:700;
+    border:2px solid #10B981; border-radius:50px; color:#10B981; background:transparent;
+    cursor:pointer; letter-spacing:2px; transition:all .3s;
+  }
+  .cta-btn:hover { background:#10B981; color:#07130F; box-shadow:0 0 40px #10B981; }
+
+  /* Navegacion inferior */
+  .nav { position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:100;
+    display:flex; gap:10px; flex-wrap: wrap; justify-content: center; max-width: 800px;
+  }
+  .nav .dot { width:12px; height:12px; border-radius:50%; background:rgba(255,255,255,.2); transition:all .3s; cursor:pointer; }
+  .nav .dot.active { background:#10B981; box-shadow:0 0 15px #10B981; transform:scale(1.4); }
+
+  /* Hint */
+  .hint { position:absolute; bottom:25px; right:40px; z-index:100; font-size:14px; color:#A7F3D0; letter-spacing:1px; }
+
+  /* Barra de progreso superior */
+  #progressBar { position:absolute; top:0; left:0; height:6px; background:linear-gradient(90deg,#10B981,#FCD34D); width:0%; z-index:200; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bgCanvas"></canvas>
+  <div id="progressBar"></div>
+
+  <div class="topbar">
+    <div class="brand">PUYO<span>·</span>EXPRESS</div>
+    <div class="pageno"><span id="cur">01</span><span class="total-pages"> / 21</span></div>
+  </div>
+
+  <!-- S1 -->
+  <section class="slide" id="s1">
+    <div class="shield"></div>
+    <div class="kicker">DOCUMENTO DEL PROYECTO FINAL</div>
+    <h1>DEVSECOPS</h1>
+    <div class="sub">Integración de prácticas de seguridad en la plataforma logística Puyo Express.</div>
+  </section>
+
+  <!-- S2 -->
+  <section class="slide" id="s2">
+    <h2>El Equipo (Grupo 6)</h2>
+    <div class="team-grid">
+      <div class="team-card zoom-in">Moises Benalcazar</div>
+      <div class="team-card zoom-in">David Cepeda</div>
+      <div class="team-card zoom-in">Mesias Mariscal</div>
+      <div class="team-card zoom-in">Carlos Ñato</div>
+      <div class="team-card zoom-in">Denise Rea</div>
+    </div>
+  </section>
+
+  <!-- S3 -->
+  <section class="slide" id="s3">
+    <h2>Descripción de la App</h2>
+    <div class="sec-card fade-up" style="width: 1000px; text-align: center;">
+      <p>Puyo Express es una plataforma integral de gestión de entregas y logística basada en una arquitectura cliente-servidor moderna.</p>
+      <p>Su función central es conectar <strong>restaurantes, clientes y repartidores</strong>, permitiendo creación de órdenes y seguimiento.</p>
+    </div>
+  </section>
+
+  <!-- S4 -->
+  <section class="slide" id="s4">
+    <h2>Stack Tecnológico</h2>
+    <div class="arch-grid">
+      <div class="arch-node zoom-in">
+        <div class="title">Frontend</div><div class="desc">React / Vite</div>
+      </div>
+      <div class="arch-node zoom-in">
+        <div class="title">Backend API</div><div class="desc">Spring Boot RESTful</div>
+      </div>
+      <div class="arch-node zoom-in">
+        <div class="title">Base de Datos</div><div class="desc">PostgreSQL</div>
+      </div>
+      <div class="arch-node zoom-in">
+        <div class="title">Infraestructura</div><div class="desc">Contenedores Docker</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S5 -->
+  <section class="slide" id="s5">
+    <h2>Objetivo DevSecOps</h2>
+    <div class="sec-card fade-up" style="width: 1000px;">
+      <p>Garantizar que la información sensible esté protegida desde la persistencia (cifrado) hasta el acceso mediante autenticación robusta.</p>
+      <p>Asegurar la trazabilidad y <strong>reducir riesgos de filtración de información (Data Breach)</strong>.</p>
+    </div>
+  </section>
+
+  <!-- S6 -->
+  <section class="slide" id="s6">
+    <h2>Diagrama de Arquitectura</h2>
+    <div class="diag-container zoom-in">
+      <div class="diag-node node-client">
+         <div class="title">Cliente Externo</div>
+         <div class="desc">(Navegador / Frontend)</div>
+      </div>
+      
+      <div class="diag-arrow arr-1">→<br><span class="arr-text">Internet Pública<br>HTTPS (TLS 1.2+)</span></div>
+
+      <div class="diag-boundary b-appnet">
+         <div class="b-label">Subred Frontal Docker (app_net)</div>
+      </div>
+      
+      <div class="diag-node node-proxy">
+         <div class="title">API Gateway</div>
+         <div class="desc">(Nginx / Proxy)</div>
+      </div>
+      
+      <div class="diag-arrow arr-2">↓<br><span class="arr-text">Proxy Reverso<br>(HTTP Intranet)</span></div>
+      
+      <div class="diag-node node-backend">
+         <div class="title">Backend API</div>
+         <div class="desc">(Spring Boot)</div>
+      </div>
+
+      <div class="diag-arrow arr-3">→<br><span class="arr-text">JPA / Hibernate<br>(TCP 5432)</span></div>
+
+      <div class="diag-boundary b-datanet">
+         <div class="b-label">Subred de Datos (data_net)</div>
+      </div>
+      
+      <div class="diag-node node-db">
+         <div class="title">Base de Datos</div>
+         <div class="desc">(PostgreSQL)</div>
+      </div>
+      
+      <div class="diag-boundary b-global">
+         <div class="b-label">LÍMITE DE CONFIANZA (Servidor de Producción)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S7 -->
+  <section class="slide" id="s7">
+    <h2>Límites de Confianza</h2>
+    <div class="sec-card fade-up" style="width: 1100px;">
+      <h3>Aislamiento Estricto</h3>
+      <p><strong>Subred Frontal (app_net):</strong> Expone únicamente el proxy inverso mapeado al puerto host público.</p>
+      <p><strong>Subred de Datos (data_net):</strong> Totalmente aislada. El backend se comunica con la DB por el puerto 5432 internamente. Sin acceso público.</p>
+    </div>
+  </section>
+
+  <!-- S8 -->
+  <section class="slide" id="s8">
+    <h2>Inventario de Activos</h2>
+    <div class="sec-card fade-up" style="width: 1000px; text-align:center;">
+      <p>Clasificamos exhaustivamente la información manejada por el sistema según su <strong>Criticidad</strong> y los requerimientos de <strong>Protección</strong>.</p>
+    </div>
+  </section>
+
+  <!-- S9 -->
+  <section class="slide" id="s9">
+    <h2>Activos Críticos</h2>
+    <table class="api-table">
+      <tr class="fade-up"><th>Activo</th><th>Ubicación</th><th>Protección</th></tr>
+      <tr class="fade-up"><td>Contraseñas</td><td>DB (users.password)</td><td>Hash BCrypt (costo 12)</td></tr>
+      <tr class="fade-up"><td>Claves JWT/AES</td><td>Docker Secrets</td><td>256 bits, sin Git</td></tr>
+      <tr class="fade-up"><td>Tokens Sesión</td><td>Cookies Cliente</td><td>HttpOnly, SameSite, Secure</td></tr>
+      <tr class="fade-up"><td>Credenciales DB</td><td>Docker Secrets</td><td>Gestión Manual</td></tr>
+    </table>
+  </section>
+
+  <!-- S10 -->
+  <section class="slide" id="s10">
+    <h2>Activos Confidenciales</h2>
+    <table class="api-table">
+      <tr class="fade-up"><th>Activo</th><th>Ubicación</th><th>Protección</th></tr>
+      <tr class="fade-up"><td>Teléfono / Dirección</td><td>DB (orders.*)</td><td>Cifrado AES-256-GCM</td></tr>
+      <tr class="fade-up"><td>Correo Electrónico</td><td>DB (users.email)</td><td>Cifrado de Volumen & TLS</td></tr>
+      <tr class="fade-up"><td>Logs Auditoría</td><td>Stdout Contenedor</td><td>Sanitación (Sin Payloads)</td></tr>
+    </table>
+  </section>
+
+  <!-- S11 -->
+  <section class="slide" id="s11">
+    <h2>Superficie de API (Auth)</h2>
+    <table class="api-table">
+      <tr class="fade-up"><th>Endpoint Base</th><th>Método</th><th>Acceso Requerido</th></tr>
+      <tr class="fade-up"><td>/api/auth/register</td><td class="method">POST</td><td>Público</td></tr>
+      <tr class="fade-up"><td>/api/auth/login</td><td class="method">POST</td><td>Público</td></tr>
+      <tr class="fade-up"><td>/api/auth/logout</td><td class="method">POST</td><td>Autenticado</td></tr>
+      <tr class="fade-up"><td>/api/auth/me</td><td class="method">GET</td><td>Autenticado</td></tr>
+    </table>
+  </section>
+
+  <!-- S12 -->
+  <section class="slide" id="s12">
+    <h2>Superficie API (Catálogos)</h2>
+    <table class="api-table">
+      <tr class="fade-up"><th>Endpoint Base</th><th>Método</th><th>Acceso Requerido</th></tr>
+      <tr class="fade-up"><td>/api/restaurants</td><td class="method">GET</td><td>Autenticado</td></tr>
+      <tr class="fade-up"><td>/api/landmarks</td><td class="method">GET</td><td>Autenticado</td></tr>
+      <tr class="fade-up"><td>/api/drivers</td><td class="method">GET</td><td>Propietario (OWNER)</td></tr>
+      <tr class="fade-up"><td>/api/drivers/{id}/status</td><td class="method">PUT</td><td>Repartidor (DRIVER)</td></tr>
+    </table>
+  </section>
+
+  <!-- S13 -->
+  <section class="slide" id="s13">
+    <h2>Superficie API (Órdenes)</h2>
+    <table class="api-table">
+      <tr class="fade-up"><th>Endpoint Base</th><th>Método</th><th>Acceso Requerido</th></tr>
+      <tr class="fade-up"><td>/api/orders</td><td class="method">GET/POST</td><td>Autenticado / Cliente</td></tr>
+      <tr class="fade-up"><td>/api/orders/{id}/status</td><td class="method">PUT</td><td>Repartidor / Propietario</td></tr>
+      <tr class="fade-up"><td>/api/orders/{id}/assign-driver</td><td class="method">PUT</td><td>Propietario (OWNER)</td></tr>
+    </table>
+  </section>
+
+  <!-- S14 -->
+  <section class="slide" id="s14">
+    <h2>Protección de Contraseñas</h2>
+    <div class="sec-card fade-up" style="width: 1000px;">
+      <p>Uso robusto de <strong>BCrypt</strong> con factor de trabajo 12 para evitar fuerza bruta y el uso de tablas arcoíris (salting automático).</p>
+      <div class="code-block zoom-in">
+        <span class="kw">@Bean</span><br>
+        <span class="kw">public</span> PasswordEncoder passwordEncoder() {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return new</span> BCryptPasswordEncoder(12);<br>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- S15 -->
+  <section class="slide" id="s15">
+    <h2>Mitigación de Fuerza Bruta</h2>
+    <div class="sec-card fade-up" style="width: 1000px;">
+      <p><strong>AuthRateLimitFilter</strong>: Máximo 10 intentos por cada 15 minutos en rutas de Auth. Bloqueo automático post-incidencia.</p>
+      <div class="code-block zoom-in">
+        HTTP/1.1 <span class="kw">429</span> Too Many Requests<br>
+        {<br>
+        &nbsp;&nbsp;<span class="str">"error"</span>: <span class="str">"Too Many Requests"</span><br>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- S16 -->
+  <section class="slide" id="s16">
+    <h2>Estructura de Logs</h2>
+    <div class="sec-card fade-up" style="width: 1000px; text-align:center;">
+      <p>Registro estructurado de eventos relevantes sin comprometer la privacidad.</p>
+      <p>Se aplica <strong>sanitación rigurosa</strong> para evitar fuga de contraseñas, payloads completos y datos PII en consola.</p>
+    </div>
+  </section>
+
+  <!-- S17 -->
+  <section class="slide" id="s17">
+    <h2>Integración SIEM (JSON)</h2>
+    <div class="sec-card fade-up" style="width: 1100px;">
+      <p>Uso de <em>logstash-logback-encoder</em>. Los logs se imprimen como un objeto JSON válido, ideal para <strong>Elasticsearch o Splunk</strong>.</p>
+      <div class="code-block zoom-in" style="font-size: 15px; white-space: normal;">
+        {"@timestamp":"2026-07-20T15:35:12.456Z", "message":"Authentication failed for user: admin", "logger_name":"AuthRateLimitFilter", "level":"WARN", "client_ip":"192.168.1.45", "event_type":"AUTH_FAILURE"}
+      </div>
+    </div>
+  </section>
+
+  <!-- S18 -->
+  <section class="slide" id="s18">
+    <h2>Hardening a Nivel Código</h2>
+    <div class="sec-card fade-up" style="width: 1100px;">
+      <h3>Cifrado PII</h4>
+      <p>AES-256-GCM para columnas sensibles (Dirección, Teléfono) protegiendo el dato en reposo.</p>
+      <h3 style="margin-top:20px;">Uso de DTOs</h3>
+      <p>Sanitación estricta y validación de entrada para evitar Inyecciones y asignación masiva de campos no deseados.</p>
+    </div>
+  </section>
+
+  <!-- S19 -->
+  <section class="slide" id="s19">
+    <h2>Manejo de Excepciones</h2>
+    <div class="sec-card fade-up" style="width: 1000px;">
+      <p>La clase <strong>ApiExceptionHandler</strong> previene fugas de información interna (Information Disclosure).</p>
+      <p>Intercepta fallos y anula <em>stacktraces</em> crudos. El cliente siempre recibe un error HTTP estándar y limpio.</p>
+    </div>
+  </section>
+
+  <!-- S20 -->
+  <section class="slide" id="s20">
+    <h2>Anti-Fingerprinting</h2>
+    <div class="sec-card fade-up" style="width: 1100px;">
+      <p>Ocultamiento de información del servidor para mitigar escaneos automatizados:</p>
+      <div class="code-block zoom-in">
+        <span class="kw"># nginx.conf</span><br>
+        server_tokens <span class="str">off</span>;<br>
+        proxy_hide_header Server;<br><br>
+        <span class="kw"># application.yml</span> (Spring)<br>
+        server.server-header: <span class="str">""</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- S21 -->
+  <section class="slide" id="s21">
+    <div class="halo"></div>
+    <div class="kicker">MADUREZ DEVSECOPS</div>
+    <h2>TRABAJO FUTURO</h2>
+    <div class="tagline">Integración SAST en CI/CD, protección robusta contra CSRF y migraciones controladas (Flyway).</div>
+    <button class="cta-btn fade-up">INICIAR CICLO</button>
+  </section>
+
+  <div class="nav" id="nav"></div>
+  <div class="hint">USA ← → O TECLAS 1-9  ·  F PARA PANTALLA COMPLETA</div>
+</div>
+
+<script>
+/* ===== Escalado del escenario a viewport ===== */
+function fitStage(){
+  var stage=document.getElementById('stage');
+  var sx=window.innerWidth/1920;
+  var sy=window.innerHeight/1080;
+  var s=Math.min(sx,sy);
+  stage.style.transform='scale('+s+')';
+  stage.style.left=(window.innerWidth-1920*s)/2+'px';
+  stage.style.top=(window.innerHeight-1080*s)/2+'px';
+}
+window.addEventListener('resize',fitStage); fitStage();
+
+/* ===== Canvas Decorativo (Nodos conectados) ===== */
+var cv=document.getElementById('bgCanvas');
+var ctx=cv.getContext('2d');
+cv.width=1920; cv.height=1080;
+var nodes=[];
+for(var i=0;i<60;i++){
+  nodes.push({
+    x:Math.random()*1920, y:Math.random()*1080,
+    vx:(Math.random()-0.5)*0.8, vy:(Math.random()-0.5)*0.8,
+    r:Math.random()*2+1
+  });
+}
+function drawNodes(){
+  ctx.clearRect(0,0,1920,1080);
+  for(var i=0;i<nodes.length;i++){
+    var n=nodes[i];
+    n.x+=n.vx; n.y+=n.vy;
+    if(n.x<0||n.x>1920) n.vx*=-1;
+    if(n.y<0||n.y>1080) n.vy*=-1;
+    ctx.fillStyle='rgba(16,185,129,0.6)';
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill();
+    
+    for(var j=i+1;j<nodes.length;j++){
+      var n2=nodes[j];
+      var dist=Math.hypot(n.x-n2.x, n.y-n2.y);
+      if(dist<150){
+        ctx.beginPath();
+        ctx.strokeStyle='rgba(252,211,77,'+(1-dist/150)*0.3+')';
+        ctx.moveTo(n.x,n.y); ctx.lineTo(n2.x,n2.y);
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawNodes);
+}
+drawNodes();
+
+/* ===== GSAP e inicializacion de slides ===== */
+var totalSlides = 21;
+var slides=[];
+for(var i=1;i<=totalSlides;i++){ slides.push('s'+i); }
+
+var cur=0;
+var animating=false;
+
+// Generar Dots
+var navContainer = document.getElementById('nav');
+for(var i=0; i<totalSlides; i++){
+  var dot = document.createElement('div');
+  dot.className = i===0 ? 'dot active' : 'dot';
+  dot.dataset.i = i;
+  navContainer.appendChild(dot);
+}
+
+function buildTimeline(index){
+  var tl=gsap.timeline();
+  var s = '#s' + (index+1);
+  
+  if(index===0){ // Slide 1
+    tl.from(s+' .kicker',{y:50,opacity:0,duration:.8,ease:'power3.out'})
+      .from(s+' h1',{y:100,opacity:0,duration:1.2,ease:'power4.out'},'-=.3')
+      .from(s+' .sub',{y:40,opacity:0,duration:.8},'-=.5')
+      .from(s+' .shield',{scale:0,rotation:-90,duration:1.5,ease:'back.out(1.5)'},'-=1.2');
+  } 
+  else if (index===20) { // Slide 21
+    tl.from(s+' .halo',{scale:0,duration:1.5,ease:'power2.out'})
+      .from(s+' .kicker',{y:40,opacity:0,duration:.7},'-=1')
+      .from(s+' h2',{scale:.8,opacity:0,duration:1,ease:'back.out(1.2)'},'-=.4')
+      .from(s+' .tagline',{y:30,opacity:0,duration:.7},'-=.5')
+      .from(s+' .fade-up',{y:30,opacity:0,duration:.7},'-=.4');
+  } 
+  else { // Resto de diapositivas genéricas
+    tl.from(s+' h2',{y:80,opacity:0,duration:.8,ease:'power3.out'});
+    
+    // Anima elementos con fade-up
+    var fadeEls = document.querySelectorAll(s+' .fade-up');
+    if(fadeEls.length){
+       tl.from(fadeEls,{y:40,opacity:0,stagger:.15,duration:.8,ease:'power2.out'},'-=.4');
+    }
+    
+    // Anima elementos con zoom-in
+    var zoomEls = document.querySelectorAll(s+' .zoom-in');
+    if(zoomEls.length){
+       tl.from(zoomEls,{scale:0.8,opacity:0,stagger:.15,duration:.8,ease:'back.out(1.2)'},'-=.6');
+    }
+  }
+  return tl;
+}
+
+function goTo(index,dir){
+  if(animating||index===cur)return;
+  animating=true;
+  var out=gsap.timeline({onComplete:function(){animating=false;}});
+  var oldEl=document.getElementById(slides[cur]);
+  var newEl=document.getElementById(slides[index]);
+  out.to(oldEl,{opacity:0,scale:0.95,y:dir>0?-150:150,duration:.6,ease:'power3.in'})
+     .set(oldEl,{visibility:'hidden',y:0,scale:1})
+     .set(newEl,{visibility:'visible',opacity:0,scale:1,y:dir>0?150:-150})
+     .to(newEl,{opacity:1,y:0,scale:1,duration:.6,ease:'power3.out'})
+     .add(buildTimeline(index),'-=.3');
+  cur=index;
+  updateNav();
+}
+
+function updateNav(){
+  document.querySelectorAll('.nav .dot').forEach(function(d,i){
+    d.classList.toggle('active',i===cur);
+  });
+  document.getElementById('cur').textContent=String(cur+1).padStart(2,'0');
+  gsap.to('#progressBar',{width:((cur+1)/totalSlides*100)+'%',duration:.6,ease:'power2.out'});
+}
+
+window.addEventListener('load',function(){
+  gsap.set('#s1',{visibility:'visible',opacity:1});
+  buildTimeline(0);
+  updateNav();
+});
+
+/* ===== Controles ===== */
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key===' ') goTo(Math.min(cur+1,totalSlides-1),1);
+  if(e.key==='ArrowLeft') goTo(Math.max(cur-1,0),-1);
+  if(e.key==='f'||e.key==='F'){
+    if(!document.fullscreenElement){document.documentElement.requestFullscreen();}
+    else{document.exitFullscreen();}
+  }
+});
+document.addEventListener('click',function(e){
+  var dot = e.target.closest('.dot');
+  if(dot){
+    var i = parseInt(dot.dataset.i);
+    goTo(i, i>cur?1:-1);
+    return;
+  }
+  if(e.target.closest('.cta-btn')||e.target.closest('.topbar')||e.target.closest('.code-block'))return;
+  goTo(Math.min(cur+1,totalSlides-1),1);
+});
+
+/* Wheel (con throttle) */
+var wlock=false;
+document.addEventListener('wheel',function(e){
+  if(wlock)return;
+  wlock=true;
+  setTimeout(function(){wlock=false;},800);
+  if(e.deltaY>0) goTo(Math.min(cur+1,totalSlides-1),1);
+  else goTo(Math.max(cur-1,0),-1);
+});
+
+/* Boton CTA (en s21) */
+var btn = document.querySelector('.cta-btn');
+if(btn){
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    gsap.fromTo('.cta-btn',{scale:1},{scale:1.05,duration:.2,yoyo:true,repeat:1});
+    goTo(0,-1);
+  });
+}
+</script>
+</body>
+</html>

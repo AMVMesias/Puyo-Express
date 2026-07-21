@@ -317,24 +317,53 @@ Los servicios internos (Base de datos PostgreSQL y backend Spring Boot) se aísl
 \end{center}
 \vspace{10pt}
 
-\subsection{Tabla de Activos}
+\subsection{Inventario General de Activos}
 A continuación, se listan los principales activos de información del sistema según lo establecido en el Inventario de Activos.
 
 \begin{table}[h!]
 \centering
+\resizebox{\linewidth}{!}{
 \begin{tabular}{l l l l}
 \toprule
-\textbf{Activo} & \textbf{Ubicación y Endpoints} & \textbf{Criticidad} & \textbf{Protección} \\
+\textbf{Activo} & \textbf{Ubicación} & \textbf{Criticidad} & \textbf{Protección} \\
 \midrule
-Contraseñas de Usuarios & \parbox[t]{4.8cm}{DB (\texttt{users.password}) \\ \texttt{/api/auth/*}} & Crítico & Hash BCrypt (costo 12) \\ \addlinespace
-Teléfono y Dirección & \parbox[t]{4.8cm}{DB (\texttt{orders.customer\_*}) \\ \texttt{/api/orders/*}} & Confidencial & AES-256-GCM por campo \\ \addlinespace
-Correo electrónico & \parbox[t]{4.8cm}{DB (\texttt{users.email}) \\ \texttt{/api/auth/*}, \texttt{/api/users/*}} & Confidencial & Cifrado de volumen y TLS \\ \addlinespace
-Claves Secretas (JWT, AES) & \parbox[t]{4.8cm}{Docker secrets \\ Interno en backend} & Crítico & 256 bits aleatorios, sin Git \\ \addlinespace
-Tokens JWT (Sesión) & \parbox[t]{4.8cm}{Cookies del Cliente \\ \texttt{/api/*}} & Crítico & HttpOnly, SameSite, Secure \\ \addlinespace
-Credenciales DB & \parbox[t]{4.8cm}{Docker secrets \\ Interno} & Crítico & Gestión manual fuera de Git \\ \addlinespace
-Logs de Auditoría & \parbox[t]{4.8cm}{stdout del contenedor \\ \texttt{/api/*}} & Confidencial & Sanitación (Sin payloads ni PII) \\
+Contraseñas de Usuarios & \parbox[t]{4.8cm}{DB (\texttt{users.password})} & Crítico & Hash BCrypt (costo 12) \\ \addlinespace
+Teléfono y Dirección & \parbox[t]{4.8cm}{DB (\texttt{orders.customer\_*})} & Confidencial & AES-256-GCM por campo \\ \addlinespace
+Correo electrónico & \parbox[t]{4.8cm}{DB (\texttt{users.email})} & Confidencial & Cifrado de volumen y TLS \\ \addlinespace
+Claves Secretas (JWT, AES) & \parbox[t]{4.8cm}{Docker secrets (Backend)} & Crítico & 256 bits aleatorios, sin Git \\ \addlinespace
+Tokens JWT (Sesión) & \parbox[t]{4.8cm}{Cookies del Cliente} & Crítico & HttpOnly, SameSite, Secure \\ \addlinespace
+Credenciales DB & \parbox[t]{4.8cm}{Docker secrets} & Crítico & Gestión manual fuera de Git \\ \addlinespace
+Logs de Auditoría & \parbox[t]{4.8cm}{stdout del contenedor} & Confidencial & Sanitación (Sin payloads ni PII) \\
 \bottomrule
 \end{tabular}
+}
+\end{table}
+
+\subsection{Superficie de la API (Inventario de Endpoints)}
+A continuación, se detalla el recorrido exhaustivo de todos los \textit{endpoints} expuestos por el \textit{backend} (Spring Boot). Este inventario mapea cada ruta, el método HTTP soportado y el nivel de acceso requerido, garantizando que no existan funciones críticas expuestas sin control de autorización, lo que mitiga vulnerabilidades como \textit{Broken Access Control}.
+
+\begin{table}[h!]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}{l l l l}
+\toprule
+\textbf{Endpoint Base} & \textbf{Método} & \textbf{Propósito Funcional} & \textbf{Acceso Requerido} \\
+\midrule
+\texttt{/api/auth/register} & POST & Creación de cuentas y perfiles & Público \\ \addlinespace
+\texttt{/api/auth/login} & POST & Autenticación y emisión de JWT en Cookie & Público \\ \addlinespace
+\texttt{/api/auth/logout} & POST & Destrucción de la sesión en el cliente & Autenticado (Cualquiera) \\ \addlinespace
+\texttt{/api/auth/me} & GET & Obtención del perfil y rol del usuario actual & Autenticado (Cualquiera) \\ \addlinespace
+\texttt{/api/restaurants} & GET & Listado público de restaurantes disponibles & Autenticado (Cualquiera) \\ \addlinespace
+\texttt{/api/landmarks} & GET & Coordenadas y puntos de referencia & Autenticado (Cualquiera) \\ \addlinespace
+\texttt{/api/drivers} & GET & Listado administrativo de repartidores & Propietario (OWNER) \\ \addlinespace
+\texttt{/api/drivers/\{id\}/status} & PUT & Actualiza estado logístico (Ocupado/Libre) & Repartidor (DRIVER) \\ \addlinespace
+\texttt{/api/orders} & GET & Historial de pedidos (Filtrado por ID/Rol) & Autenticado (Cualquiera) \\ \addlinespace
+\texttt{/api/orders} & POST & Creación de una nueva orden de comida & Cliente (CUSTOMER) \\ \addlinespace
+\texttt{/api/orders/\{id\}/status} & PUT & Modifica el estado del envío & Repartidor / Propietario \\ \addlinespace
+\texttt{/api/orders/\{id\}/assign-driver}& PUT & Asignación manual de pedido a un chofer & Propietario (OWNER) \\
+\bottomrule
+\end{tabular}
+}
 \end{table}
 
 \newpage
