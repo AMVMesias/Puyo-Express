@@ -71,7 +71,7 @@ No ejecutar `docker compose down -v` durante un incidente: eliminaría el volume
 
 - Reverse proxy administrado con TLS moderno y redirección HTTP a HTTPS.
 - Solo 443 público; PostgreSQL y backend permanecen internos.
-- `APP_ORIGIN` con el dominio exacto y `JWT_SECURE_COOKIE=true`.
+- `CORS_ALLOWED_ORIGINS` con el dominio exacto y `JWT_SECURE_COOKIE=true`.
 - Backups, colector de logs, alertas, rate limiting y monitorización.
 - Supervisión del consumo de teselas y cumplimiento de la política de OpenStreetMap; para tráfico elevado, contratar o alojar un proveedor de teselas con SLA.
 - Verificación administrativa de cifrado de disco, actualizaciones y cuentas con MFA.

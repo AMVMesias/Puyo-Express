@@ -1,5 +1,6 @@
 import { ArrowLeft, Check, MapPin, Minus, Plus, ShoppingBag, Star } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import fallbackRestaurantBanner from '../../../../assets/puyo-express-login-hero.png';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import type { MenuItem, OrderItem, Restaurant } from '../../../domain/entities';
 import { Badge } from '../atoms/Badge';
@@ -17,6 +18,21 @@ const steps = [
   { key: 'picked_up', label: 'En camino', description: 'El pedido está viajando hacia el destino.' },
   { key: 'delivered', label: 'Entregado', description: 'Pedido completado.' },
 ] as const;
+
+function RestaurantBanner({ restaurant }: { restaurant: Restaurant }) {
+  return (
+    <img
+      alt={restaurant.name}
+      className="h-full w-full object-cover"
+      onError={(event) => {
+        event.currentTarget.onerror = null;
+        event.currentTarget.src = fallbackRestaurantBanner;
+      }}
+      referrerPolicy="no-referrer"
+      src={restaurant.banner?.trim() || fallbackRestaurantBanner}
+    />
+  );
+}
 
 export function CustomerOrderFlow() {
   const {
@@ -159,12 +175,7 @@ export function CustomerOrderFlow() {
 
         <Card className="overflow-hidden">
           <div className="relative h-40">
-            <img
-              alt={selectedRestaurant.name}
-              className="h-full w-full object-cover"
-              referrerPolicy="no-referrer"
-              src={selectedRestaurant.banner}
-            />
+            <RestaurantBanner restaurant={selectedRestaurant} />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 text-white">
               <div>
@@ -306,7 +317,7 @@ export function CustomerOrderFlow() {
           <Card key={restaurant.id} className="cursor-pointer overflow-hidden transition hover:border-emerald-300 hover:shadow-md">
             <button className="block h-full w-full text-left" onClick={() => setSelectedRestaurant(restaurant)} type="button">
               <div className="relative h-32">
-                <img alt={restaurant.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" src={restaurant.banner} />
+                <RestaurantBanner restaurant={restaurant} />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 to-transparent" />
                 <Badge className="absolute right-2 top-2" tone="amber">
                   <Star className="h-3 w-3 fill-amber-700" />

@@ -150,7 +150,7 @@ evadir el rate limiting o contaminar los registros de auditoría.
 Para producción son obligatorios:
 
 ```env
-APP_ORIGIN=https://app.ejemplo.com
+CORS_ALLOWED_ORIGINS=https://app.ejemplo.com
 JWT_SECURE_COOKIE=true
 ```
 
@@ -165,9 +165,15 @@ intentos de asignación masiva y clientes desactualizados.
 El manejador global convierte:
 
 - JSON inválido en HTTP 400;
-- violaciones de validación en HTTP 400;
+- violaciones de validación en HTTP 400 con `fieldErrors` por campo;
+- usuario o correo duplicado en HTTP 409 con los códigos `USERNAME_TAKEN` o
+  `EMAIL_TAKEN`;
 - conflictos de integridad en HTTP 409;
 - sin devolver stack traces ni mensajes internos de la base.
+
+En el entorno local se permiten explícitamente `http://localhost:8088` y
+`http://127.0.0.1:8088`. Esto evita rechazar el registro cuando el navegador usa
+la dirección publicada por Docker, sin aceptar comodines ni orígenes externos.
 
 `ddl-auto` usa `validate` por defecto. Docker Compose mantiene temporalmente
 `update` para el entorno local mediante `HIBERNATE_DDL_AUTO`, porque el proyecto

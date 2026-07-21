@@ -77,7 +77,7 @@ Se registran inicio/cierre de sesión, registro y cada solicitud con resultado, 
 El puerto Compose está enlazado a `127.0.0.1` para que no quede expuesto directamente. Coloca un reverse proxy TLS delante, publica solo 443 y configura:
 
 ```env
-APP_ORIGIN=https://app.example.com
+CORS_ALLOWED_ORIGINS=https://app.example.com
 JWT_SECURE_COOKIE=true
 ```
 

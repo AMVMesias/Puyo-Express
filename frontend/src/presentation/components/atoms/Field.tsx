@@ -17,10 +17,23 @@ function FieldShell({ children, label }: { children: ReactNode; label: string })
 const controlClass =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-emerald-500/20';
 
-export function Input({ label, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+export function Input({
+  error,
+  label,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { error?: string; label: string }) {
   return (
     <FieldShell label={label}>
-      <input className={controlClass} {...props} />
+      <input
+        className={`${controlClass} ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
+        {...props}
+        aria-invalid={error ? true : props['aria-invalid']}
+      />
+      {error ? (
+        <span className="block text-xs font-semibold text-red-600" role="alert">
+          {error}
+        </span>
+      ) : null}
     </FieldShell>
   );
 }

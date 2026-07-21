@@ -55,6 +55,15 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
   const selectedLandmark = landmarks.find((landmark) => landmark.id === selectedLandmarkId);
   const activeOrder = orders.find((order) => order.status !== 'delivered');
 
+  const refreshOrders = useCallback(async () => {
+    try {
+      const request = await fetch(`${API_URL}/orders`, { credentials: 'include' });
+      if (request.ok) setOrders(await request.json());
+    } catch (error) {
+      console.error('Error refreshing orders', error);
+    }
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       const [resReq, drvReq, lndReq, ordReq] = await Promise.all([
@@ -79,17 +88,17 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
   }, [selectedLandmarkId]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const refreshOrders = async () => {
-    try {
-      const req = await fetch(`${API_URL}/orders`, { credentials: 'include' });
-      if (req.ok) setOrders(await req.json());
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    void fetchData();
+    const intervalId = window.setInterval(() => void refreshOrders(), 8_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refreshOrders();
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [fetchData, refreshOrders]);
 
   const selectLandmark = (landmarkId: number) => setSelectedLandmarkId(landmarkId);
   const setActiveTabWrapper = (tab: AppTab) => setActiveTab(tab);
@@ -204,6 +213,7 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       landmarks,
       orders,
       restaurants,
+      refreshOrders,
       selectedLandmark,
       selectedLandmarkId,
     ],

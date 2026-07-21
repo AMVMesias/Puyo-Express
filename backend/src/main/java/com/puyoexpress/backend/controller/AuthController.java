@@ -3,6 +3,7 @@ package com.puyoexpress.backend.controller;
 import com.puyoexpress.backend.dto.AuthResponse;
 import com.puyoexpress.backend.dto.LoginRequest;
 import com.puyoexpress.backend.dto.RegisterRequest;
+import com.puyoexpress.backend.exception.RegistrationException;
 import com.puyoexpress.backend.security.UserDetailsImpl;
 import com.puyoexpress.backend.service.AuthService;
 import com.puyoexpress.backend.service.SecurityAuditService;
@@ -67,12 +68,10 @@ public class AuthController {
             audit.record("AUTH_REGISTER", "SUCCESS", response.getUsername(),
                     httpRequest.getRemoteAddr(), "role=" + response.getRole());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
+        } catch (RegistrationException e) {
             audit.record("AUTH_REGISTER", "FAILURE", request.getUsername(),
-                    httpRequest.getRemoteAddr(), "validation_rejected");
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", "No fue posible completar el registro con esos datos.")
-            );
+                    httpRequest.getRemoteAddr(), "registration_rejected code=" + e.getCode());
+            throw e;
         }
     }
 

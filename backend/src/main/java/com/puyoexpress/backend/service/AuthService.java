@@ -3,6 +3,7 @@ package com.puyoexpress.backend.service;
 import com.puyoexpress.backend.dto.AuthResponse;
 import com.puyoexpress.backend.dto.LoginRequest;
 import com.puyoexpress.backend.dto.RegisterRequest;
+import com.puyoexpress.backend.exception.RegistrationException;
 import com.puyoexpress.backend.model.ERole;
 import com.puyoexpress.backend.model.Coordinates;
 import com.puyoexpress.backend.model.Driver;
@@ -19,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
 
 /**
  * Service handling user authentication (login) and registration.
@@ -84,15 +86,30 @@ public class AuthService {
 
         if (InputPolicy.containsUnsafeControlCharacters(username)
                 || InputPolicy.containsUnsafeControlCharacters(email)) {
-            throw new IllegalArgumentException("Los datos contienen caracteres no permitidos.");
+            throw new RegistrationException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_INPUT",
+                    null,
+                    "Los datos contienen caracteres de control no permitidos."
+            );
         }
 
         if (userRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("El nombre de usuario ya está en uso.");
+            throw new RegistrationException(
+                    HttpStatus.CONFLICT,
+                    "USERNAME_TAKEN",
+                    "username",
+                    "El nombre de usuario ya está en uso. Elige otro."
+            );
         }
 
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+            throw new RegistrationException(
+                    HttpStatus.CONFLICT,
+                    "EMAIL_TAKEN",
+                    "email",
+                    "El correo electrónico ya está registrado. Inicia sesión o utiliza otro correo."
+            );
         }
 
         ERole role;
@@ -102,15 +119,20 @@ public class AuthService {
                 normalizedRole = "ROLE_" + normalizedRole;
             }
             role = ERole.valueOf(normalizedRole);
-            if (role != ERole.ROLE_CUSTOMER && role != ERole.ROLE_DRIVER) {
-                throw new IllegalArgumentException("El registro público solo permite cuentas de cliente o repartidor.");
-            }
         } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().startsWith("El registro público solo permite")) {
-                throw e;
-            }
-            throw new IllegalArgumentException(
-                    "Rol inválido. Usa CUSTOMER o DRIVER."
+            throw new RegistrationException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_ROLE",
+                    "role",
+                    "El tipo de cuenta debe ser cliente o repartidor."
+            );
+        }
+        if (role != ERole.ROLE_CUSTOMER && role != ERole.ROLE_DRIVER) {
+            throw new RegistrationException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_ROLE",
+                    "role",
+                    "El registro público solo permite cuentas de cliente o repartidor."
             );
         }
 

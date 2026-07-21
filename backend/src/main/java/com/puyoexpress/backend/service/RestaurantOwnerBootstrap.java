@@ -98,16 +98,70 @@ public class RestaurantOwnerBootstrap implements ApplicationRunner {
     }
 
     private void seedLocalCatalog(Restaurant restaurant) {
-        if (!menuItemRepository.existsByRestaurantIdAndName(restaurant.getId(), "Maito de tilapia")) {
-            MenuItem item = new MenuItem();
-            item.setRestaurant(restaurant);
-            item.setName("Maito de tilapia");
-            item.setDescription("Plato local de tilapia preparado en hoja.");
-            item.setPrice(8.50);
-            item.setCategory("Platos fuertes");
-            item.setImage("🐟");
-            menuItemRepository.save(item);
-        }
+        seedMenuItem(
+                restaurant,
+                "Maito de tilapia",
+                "Tilapia sazonada con productos amazónicos y cocida en hoja.",
+                8.50,
+                "Platos fuertes",
+                "🐟"
+        );
+        seedMenuItem(
+                restaurant,
+                "Encebollado",
+                "Sopa de pescado con yuca, cebolla curtida y hierbas frescas.",
+                4.50,
+                "Sopas",
+                "🍲"
+        );
+        seedMenuItem(
+                restaurant,
+                "Ceviche de camarón",
+                "Camarones marinados con limón, tomate, cebolla y cilantro.",
+                7.50,
+                "Ceviches",
+                "🍤"
+        );
+        seedMenuItem(
+                restaurant,
+                "Tilapia frita",
+                "Tilapia entera acompañada de patacones, arroz y ensalada.",
+                9.00,
+                "Platos fuertes",
+                "🐠"
+        );
+        seedMenuItem(
+                restaurant,
+                "Seco de pollo",
+                "Pollo cocido en salsa de hierbas, servido con arroz y maduro.",
+                6.50,
+                "Platos fuertes",
+                "🍗"
+        );
+        seedMenuItem(
+                restaurant,
+                "Chontacuro asado",
+                "Preparación tradicional amazónica asada y acompañada con yuca.",
+                5.00,
+                "Comida amazónica",
+                "🌿"
+        );
+        seedMenuItem(
+                restaurant,
+                "Té de guayusa",
+                "Infusión amazónica de guayusa servida caliente o fría.",
+                2.00,
+                "Bebidas",
+                "🍵"
+        );
+        seedMenuItem(
+                restaurant,
+                "Jugo natural",
+                "Jugo preparado al momento con fruta disponible de temporada.",
+                2.50,
+                "Bebidas",
+                "🥤"
+        );
 
         if (landmarkRepository.findByName("Parque Central de Puyo").isEmpty()) {
             Landmark landmark = new Landmark();
@@ -117,6 +171,26 @@ public class RestaurantOwnerBootstrap implements ApplicationRunner {
             landmark.setPosition(new Coordinates(-1.486667, -77.995833));
             landmarkRepository.save(landmark);
         }
+    }
+
+    private void seedMenuItem(Restaurant restaurant,
+                              String name,
+                              String description,
+                              double price,
+                              String category,
+                              String image) {
+        if (menuItemRepository.existsByRestaurantIdAndName(restaurant.getId(), name)) {
+            return;
+        }
+
+        MenuItem item = new MenuItem();
+        item.setRestaurant(restaurant);
+        item.setName(name);
+        item.setDescription(description);
+        item.setPrice(price);
+        item.setCategory(category);
+        item.setImage(image);
+        menuItemRepository.save(item);
     }
 
     private void validateConfiguration() {

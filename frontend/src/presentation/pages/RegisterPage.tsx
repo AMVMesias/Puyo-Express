@@ -1,7 +1,11 @@
 import { ShoppingBag, Truck, UserPlus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import loginHero from '../../../assets/puyo-express-login-hero.png';
-import { useAuth, type PublicRegistrationRole } from '../../application/auth/AuthProvider';
+import {
+  useAuth,
+  type PublicRegistrationRole,
+  type RegistrationField,
+} from '../../application/auth/AuthProvider';
 import { useToast } from '../../application/toast/ToastProvider';
 import { Button } from '../components/atoms/Button';
 import { Card } from '../components/atoms/Card';
@@ -16,10 +20,24 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<PublicRegistrationRole>('CUSTOMER');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RegistrationField, string>>>({});
+
+  const clearFieldError = (field: RegistrationField) => {
+    setFormError('');
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
+    setFormError('');
+    setFieldErrors({});
 
     try {
       const result = await register(username.trim(), email.trim(), password, role);
@@ -28,10 +46,15 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
         notify('Registro exitoso. Ahora puedes iniciar sesión.', 'success');
         onNavigateToLogin();
       } else {
-        notify(result.message ?? 'Hubo un problema con el registro.', 'warning');
+        const message = result.message ?? 'Hubo un problema con el registro.';
+        setFormError(message);
+        setFieldErrors(result.fieldErrors ?? {});
+        notify(message, 'warning');
       }
     } catch {
-      notify('Error de conexión con el servidor.', 'warning');
+      const message = 'Error de conexión con el servidor.';
+      setFormError(message);
+      notify(message, 'warning');
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +94,10 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-100'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
                   }`}
-                  onClick={() => setRole('CUSTOMER')}
+                  onClick={() => {
+                    setRole('CUSTOMER');
+                    clearFieldError('role');
+                  }}
                   type="button"
                 >
                   <ShoppingBag className="h-4 w-4" />
@@ -83,7 +109,10 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-100'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
                   }`}
-                  onClick={() => setRole('DRIVER')}
+                  onClick={() => {
+                    setRole('DRIVER');
+                    clearFieldError('role');
+                  }}
                   type="button"
                 >
                   <Truck className="h-4 w-4" />
@@ -91,10 +120,20 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
                 </button>
               </div>
             </fieldset>
+
+            {formError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" role="alert">
+                {formError}
+              </div>
+            ) : null}
             
             <Input
+              error={fieldErrors.username}
               label="Nombre de usuario"
-              onChange={(event) => setUsername(event.target.value)}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                clearFieldError('username');
+              }}
               required
               autoComplete="username"
               minLength={3}
@@ -103,16 +142,25 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               value={username}
             />
             <Input
+              error={fieldErrors.email}
               label="Correo electrónico"
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                clearFieldError('email');
+              }}
               required
               autoComplete="email"
+              maxLength={100}
               type="email"
               value={email}
             />
             <Input
+              error={fieldErrors.password}
               label="Contraseña"
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                clearFieldError('password');
+              }}
               required
               autoComplete="new-password"
               minLength={12}
@@ -120,6 +168,7 @@ export function RegisterPage({ onNavigateToLogin }: { onNavigateToLogin: () => v
               type="password"
               value={password}
             />
+            <p className="-mt-2 text-xs text-slate-500">Usa entre 12 y 120 caracteres.</p>
             
             <Button
               className="mt-6 w-full shadow-lg shadow-emerald-700/20 hover:shadow-emerald-700/30"

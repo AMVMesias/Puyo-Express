@@ -30,7 +30,7 @@ export interface Restaurant {
   description: string;
   category: string;
   logo: string;
-  banner: string;
+  banner?: string | null;
   rating: number;
   locationName: string;
   position: Coordinates;

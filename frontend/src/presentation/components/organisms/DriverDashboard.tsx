@@ -1,4 +1,4 @@
-import { Award, Bike, CheckCircle2, MapPin, Navigation, Power, Wallet } from 'lucide-react';
+import { Award, Bike, CheckCircle2, MapPin, Navigation, Power, RefreshCw, Wallet } from 'lucide-react';
 import { useAuth } from '../../../application/auth/AuthProvider';
 import { useDelivery } from '../../../application/delivery/DeliveryProvider';
 import { Badge } from '../atoms/Badge';
@@ -10,7 +10,14 @@ import { OrderStatusBadge } from '../molecules/OrderStatusBadge';
 
 export function DriverDashboard() {
   const { user } = useAuth();
-  const { assignDriver, drivers, orders, updateDriverStatus, updateOrderStatus } = useDelivery();
+  const {
+    assignDriver,
+    drivers,
+    orders,
+    refreshOrders,
+    updateDriverStatus,
+    updateOrderStatus,
+  } = useDelivery();
   const currentDriver = drivers.find((driver) => driver.userId === user?.id);
   const myActiveOrder = orders.find(
     (order) => order.driverId === currentDriver?.id && order.status !== 'delivered',
@@ -49,14 +56,23 @@ export function DriverDashboard() {
               <p className="text-sm text-slate-500">{currentDriver.vehicle === 'moto' ? 'Moto' : 'Bicicleta'} · {currentDriver.zone}</p>
             </div>
           </div>
-          <Button
-            disabled={currentDriver?.status === 'delivering'}
-            icon={<Power className="h-4 w-4" />}
-            onClick={toggleConnection}
-            variant={currentDriver?.status === 'offline' ? 'primary' : 'secondary'}
-          >
-            {currentDriver?.status === 'offline' ? 'Conectarse' : 'Desconectarse'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              icon={<RefreshCw className="h-4 w-4" />}
+              onClick={() => void refreshOrders()}
+              variant="ghost"
+            >
+              Actualizar
+            </Button>
+            <Button
+              disabled={currentDriver?.status === 'delivering'}
+              icon={<Power className="h-4 w-4" />}
+              onClick={toggleConnection}
+              variant={currentDriver?.status === 'offline' ? 'primary' : 'secondary'}
+            >
+              {currentDriver?.status === 'offline' ? 'Conectarse' : 'Desconectarse'}
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -72,7 +88,9 @@ export function DriverDashboard() {
         <div className="space-y-3">
           {currentDriver?.status === 'offline' ? (
             <EmptyState icon={<Power className="h-6 w-6" />} title="Estás desconectado">
-              Conéctate para recibir pedidos disponibles cerca de los restaurantes.
+              {availableOrders.length > 0
+                ? `Hay ${availableOrders.length} ${availableOrders.length === 1 ? 'pedido listo' : 'pedidos listos'}. Conéctate para ver y aceptar la cola.`
+                : 'Conéctate para recibir pedidos disponibles cerca de los restaurantes.'}
             </EmptyState>
           ) : myActiveOrder ? (
             <Card className="space-y-4 border-emerald-300 p-4">
