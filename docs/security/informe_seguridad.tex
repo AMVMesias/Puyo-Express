@@ -1,0 +1,76 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.54cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+
+\title{\textbf{Informe Técnico de Seguridad y Arquitectura} \\ \Large Puyo Express}
+\author{Documento de Arquitectura y Configuración}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introducción}
+Este documento técnico detalla las medidas y controles de seguridad implementados en la arquitectura de \textbf{Puyo Express}. A continuación se exponen las especificaciones, mecanismos criptográficos y configuraciones de red, junto con su respectiva ubicación en el código fuente para su revisión y auditoría.
+
+\section{Inventario de Activos y Clasificación de Datos}
+\textbf{Descripción de la implementación:}\\
+El proyecto mantiene un inventario de activos de información donde se clasifica la criticidad de los datos (contraseñas, teléfonos, direcciones, correos) y se establecen las normativas para su persistencia segura.
+
+\noindent\textbf{Ubicación de la documentación:}\\
+\texttt{docs/security/ASSET\_INVENTORY.md}
+
+\noindent\textbf{Justificación técnica:}\\
+Permite garantizar que los datos sensibles sean tratados con el nivel de protección criptográfica adecuado desde la capa de acceso a datos, reduciendo el riesgo de exposición ante una brecha de seguridad (Data Breach) y estandarizando las políticas de retención.
+
+\section{Mecanismos Criptográficos y Auditoría (Logs)}
+\textbf{Descripción de la implementación:}\\
+\begin{itemize}
+    \item \textbf{Cifrado en reposo (AES-256-GCM)}: Aplicado a nivel de columna para datos personales identificables (PII) como teléfonos y direcciones de entrega. Este cifrado simétrico autenticado garantiza confidencialidad e integridad del campo en la base de datos.
+    \item \textbf{Firma de tokens (HMAC-SHA256)}: El algoritmo HS256 se utiliza para la firma de los JSON Web Tokens (JWT), asegurando la inmutabilidad de las sesiones y la validación de identidad del cliente sin exponer estado en el servidor.
+    \item \textbf{Derivación de claves (BCrypt)}: Empleado con un factor de trabajo adecuado (costo 12) para el almacenamiento de contraseñas. Previene ataques de fuerza bruta y mitigación de tablas arcoíris mediante el uso de salteo automático (salting).
+    \item \textbf{Auditoría de Seguridad}: Los eventos críticos de autenticación y autorización se persisten mediante un logger específico, sin registrar payloads ni credenciales.
+\end{itemize}
+
+\noindent\textbf{Ubicación de la implementación:}\\
+Configuración: \texttt{backend/src/main/resources/application.yml} (parámetros \texttt{app.crypto.data-key} y \texttt{logging.level.SECURITY\_AUDIT}).\\
+Código fuente: \texttt{backend/src/main/java/com/puyoexpress/backend/security}.
+
+\section{Hardening del Host y Entorno de Ejecución}
+\textbf{Descripción de la implementación:}\\
+El entorno del servidor host se somete a controles de endurecimiento. Esto incluye la validación de cifrado de almacenamiento a nivel de bloque (BitLocker/LUKS), validación del estado del cortafuegos (Firewall), protección antivirus en tiempo real y la desactivación de protocolos vulnerables (ej. SMBv1).
+
+\noindent\textbf{Ubicación de la implementación:}\\
+Script de validación: \texttt{scripts/audit-server-hardening.ps1}\\
+Reporte estático: \texttt{docs/security/SERVER\_HARDENING\_REPORT.md}
+
+\section{Aislamiento de Red mediante Docker}
+\textbf{Descripción de la implementación:}\\
+Los servicios se despliegan en infraestructuras de red virtualizadas (Bridge Networks). Los servicios internos (Base de datos PostgreSQL y backend Spring Boot) se aíslan en la subred \texttt{data\_net} y \texttt{app\_net}. No se exponen puertos al host público. Únicamente el proxy inverso (Frontend/Nginx) mapea un puerto al loopback de la máquina host (\texttt{127.0.0.1:8088}).
+
+\noindent\textbf{Ubicación de la implementación:}\\
+Directiva \texttt{networks} y \texttt{expose} en \texttt{docker-compose.yml}.
+
+\section{Ocultación de Firmas de Software (Server Tokens)}
+\textbf{Descripción de la implementación:}\\
+Se suprime la propagación de las cabeceras HTTP que identifican las tecnologías y versiones del servidor. Esto interrumpe la fase de reconocimiento de ataques automatizados y análisis pasivo por parte de agentes maliciosos.
+
+\noindent\textbf{Ubicación de la implementación:}\\
+Nginx (Frontend proxy): \texttt{frontend/nginx.conf} mediante la directiva \texttt{server\_tokens off;} y \texttt{proxy\_hide\_header Server;}.\\
+Tomcat (Backend): \texttt{backend/src/main/resources/application.yml} mediante \texttt{server.server-header: ""}.
+
+\section{Prevención de Agotamiento de Recursos (Limitación de Payload)}
+\textbf{Descripción de la implementación:}\\
+Se establecen límites estrictos en la recepción de payloads HTTP para mitigar ataques de Denegación de Servicio (DoS) que exploten el agotamiento de memoria o ancho de banda. 
+
+\noindent\textbf{Ubicación de la implementación:}\\
+Nginx (Frontend proxy): \texttt{frontend/nginx.conf} mediante \texttt{client\_max\_body\_size 1m;}.\\
+Tomcat (Backend): \texttt{backend/src/main/resources/application.yml} definiendo el umbral en \texttt{1048576} bytes (1MB) a través de propiedades de sistema y límites multiparte.
+
+\end{document}

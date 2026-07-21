@@ -39,4 +39,11 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", "La operación entra en conflicto con datos existentes."));
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleAllUncaughtException(Exception exception) {
+        // Loguear internamente si es necesario
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Ha ocurrido un error interno en el servidor."));
+    }
 }

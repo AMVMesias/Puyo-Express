@@ -83,5 +83,3 @@ logging:
     com.puyoexpress: INFO
     SECURITY_AUDIT: INFO
     org.springframework.security: WARN
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level logger=%logger{36} thread=%thread msg=%msg%n"

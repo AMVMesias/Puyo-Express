@@ -1,0 +1,1033 @@
+\documentclass[11pt,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,top=1.8cm,bottom=2.0cm,left=1.75cm,right=1.75cm,headheight=24pt]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc,positioning,shapes.geometric,arrows.meta,backgrounds,fit,shadows.blur}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{amsmath}
+
+% -----------------------------------------------------------------------------
+% Paleta visual: inventario, cafeteria, tecnologia y calidad.
+% -----------------------------------------------------------------------------
+\definecolor{deepNavy}{HTML}{0B1320}
+\definecolor{ink}{HTML}{152033}
+\definecolor{panel}{HTML}{F7F9FC}
+\definecolor{paperWarm}{HTML}{FBF7EF}
+\definecolor{teal}{HTML}{10A7A7}
+\definecolor{tealDark}{HTML}{0E6B6F}
+\definecolor{leaf}{HTML}{6DAA3F}
+\definecolor{gold}{HTML}{F0B84A}
+\definecolor{coral}{HTML}{E35D5B}
+\definecolor{violet}{HTML}{6B5DD3}
+\definecolor{coffeeBg}{HTML}{965640}
+\definecolor{coffeeDeep}{HTML}{713825}
+\definecolor{coffeePanel}{HTML}{EFE3C8}
+\definecolor{coffeePanelLight}{HTML}{F8EED8}
+\definecolor{coffeeInk}{HTML}{21140F}
+\definecolor{coffeeMute}{HTML}{7A6858}
+\definecolor{coffeeButton}{HTML}{AD6046}
+\definecolor{inputBlue}{HTML}{EAF0FF}
+\definecolor{codeBg}{HTML}{1D1B2E}
+\definecolor{codeHeader}{HTML}{2B2B2B}
+\definecolor{codeFrame}{HTML}{35324A}
+\definecolor{codeGutter}{HTML}{151421}
+\definecolor{codeGutterLine}{HTML}{343047}
+\definecolor{codeText}{HTML}{E9EAFF}
+\definecolor{codeComment}{HTML}{77768A}
+\definecolor{codeKeyword}{HTML}{C19DFF}
+\definecolor{codeString}{HTML}{86EFAC}
+\definecolor{codeNumber}{HTML}{8F90A6}
+\definecolor{codeAccent}{HTML}{FF66B3}
+\definecolor{methodGet}{HTML}{148F77}
+\definecolor{methodPost}{HTML}{1F6FEB}
+\definecolor{methodPut}{HTML}{B7791F}
+\definecolor{methodDelete}{HTML}{C53030}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=tealDark,
+  urlcolor=violet,
+  citecolor=tealDark,
+  pdftitle={Informe tecnico del backend de inventario Don Gato},
+  pdfauthor={Equipo de trabajo ESPE}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\renewcommand{\arraystretch}{1.25}
+\raggedbottom
+
+% -----------------------------------------------------------------------------
+% Encabezados, capitulos y tabla de contenidos.
+% -----------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{tealDark}{\textbf{Don Gato Inventory}}}
+\rhead{\textcolor{ink}{Arquitectura Hexagonal y SQA}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{tealDark}\leaders\hrule height \headrulewidth\hfill}}
+
+\titleformat{\chapter}[display]
+  {\normalfont\Huge\bfseries\color{deepNavy}}
+  {\begin{tikzpicture}[baseline=(n.base)]
+     \node[fill=tealDark,text=white,rounded corners=6pt,inner xsep=10pt,inner ysep=6pt] (n) {\chaptertitlename\ \thechapter};
+   \end{tikzpicture}}
+  {10pt}
+  {\Huge}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{tealDark}}
+  {\thesection}{0.7em}{}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{ink}}
+  {\thesubsection}{0.6em}{}
+
+% -----------------------------------------------------------------------------
+% Listings con look de ventana tipo macOS y sombra.
+% -----------------------------------------------------------------------------
+\lstdefinelanguage{YAML}{
+  sensitive=false,
+  morecomment=[l]{\#},
+  morestring=[b]',
+  morestring=[b]",
+  keywords={true,false,null,on,push,pull_request,jobs,steps,uses,run,with,name,path,branches,runs-on,working-directory},
+  keywordstyle=\color{codeKeyword}\bfseries
+}
+\lstdefinelanguage{Properties}{
+  sensitive=false,
+  morecomment=[l]{\#},
+  morecomment=[l]{!},
+  morestring=[b]"
+}
+\lstdefinelanguage{Text}{}
+
+\lstdefinestyle{codestyle}{
+  basicstyle=\ttfamily\scriptsize\color{codeText},
+  keywordstyle=\color{codeKeyword}\bfseries,
+  stringstyle=\color{codeString},
+  commentstyle=\color{codeComment}\itshape,
+  numberstyle=\tiny\color{codeNumber},
+  identifierstyle=\color{codeText},
+  numbers=left,
+  numbersep=12pt,
+  xleftmargin=28pt,
+  framexleftmargin=28pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  tabsize=2,
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  frame=none,
+  inputencoding=utf8,
+  extendedchars=true,
+  literate=
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {ü}{{\"u}}1 {Ü}{{\"U}}1
+    {¿}{{?`}}1 {¡}{{!`}}1 {—}{{---}}1 {–}{{--}}1
+    {≥}{{$\ge$}}1 {≤}{{$\le$}}1 {✓}{{\checkmark}}1
+}
+
+\tcbset{
+  concept/.style={
+    enhanced,
+    breakable,
+    arc=6pt,
+    boxrule=0.7pt,
+    left=9pt,
+    right=9pt,
+    top=7pt,
+    bottom=7pt,
+    colback=panel,
+    colframe=tealDark,
+    drop fuzzy shadow=black!18
+  },
+  codebox/.style={
+    enhanced,
+    breakable,
+    listing only,
+    colback=codeBg,
+    colframe=codeFrame,
+    coltitle=white,
+    colbacktitle=codeHeader,
+    fonttitle=\bfseries\scriptsize,
+    lefttitle=36pt,
+    righttitle=36pt,
+    halign title=center,
+    arc=6pt,
+    boxrule=0.65pt,
+    top=1.5mm,
+    bottom=1.5mm,
+    left=0mm,
+    right=1.2mm,
+    drop fuzzy shadow=black!35,
+    underlay unbroken and first={
+      \fill[codeGutter] ([xshift=0.6pt,yshift=-17.5pt]frame.north west) rectangle ([xshift=37pt,yshift=0.6pt]frame.south west);
+      \draw[codeGutterLine,line width=.35pt] ([xshift=37pt,yshift=-17.5pt]frame.north west) -- ([xshift=37pt,yshift=0.6pt]frame.south west);
+    },
+    underlay middle and last={
+      \fill[codeGutter] ([xshift=0.6pt,yshift=-0.6pt]frame.north west) rectangle ([xshift=37pt,yshift=0.6pt]frame.south west);
+      \draw[codeGutterLine,line width=.35pt] ([xshift=37pt,yshift=-0.6pt]frame.north west) -- ([xshift=37pt,yshift=0.6pt]frame.south west);
+    },
+    overlay unbroken and first={
+      \fill[coral] ([xshift=13pt,yshift=-10pt]frame.north west) circle (2.2pt);
+      \fill[gold] ([xshift=22pt,yshift=-10pt]frame.north west) circle (2.2pt);
+      \fill[leaf] ([xshift=31pt,yshift=-10pt]frame.north west) circle (2.2pt);
+    }
+  }
+}
+
+\newtcolorbox{infobox}[1][]{
+  concept,
+  title={#1},
+  colbacktitle=tealDark,
+  coltitle=white,
+  fonttitle=\bfseries
+}
+
+\newtcolorbox{warningbox}[1][]{
+  concept,
+  title={#1},
+  colback=paperWarm,
+  colframe=gold,
+  colbacktitle=gold,
+  coltitle=deepNavy,
+  fonttitle=\bfseries
+}
+
+\newtcblisting{codewindow}[2][]{
+  codebox,
+  title={#2},
+  listing options={style=codestyle,#1}
+}
+
+\newcommand{\CodeFile}[3]{%
+  \subsection*{\textcolor{tealDark}{\scriptsize\nolinkurl{#3}}}%
+  \tcbinputlisting{codebox,title={Código fuente},listing file={#2},listing options={style=codestyle,language=#1}}%
+}
+
+\newcommand{\GET}{\textcolor{methodGet}{\textbf{GET}}}
+\newcommand{\POST}{\textcolor{methodPost}{\textbf{POST}}}
+\newcommand{\PUT}{\textcolor{methodPut}{\textbf{PUT}}}
+\newcommand{\DELETE}{\textcolor{methodDelete}{\textbf{DELETE}}}
+\newcommand{\pathcode}[1]{{\ttfamily\scriptsize\nolinkurl{#1}}}
+\newcommand{\chip}[2]{\tikz[baseline=(x.base)]\node[rounded corners=4pt,fill=#1!14,draw=#1!55,text=deepNavy,inner xsep=5pt,inner ysep=2pt,font=\scriptsize\bfseries](x){#2};}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% Portada inspirada en el front: fondo cafe, tarjeta crema y emblema central.
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[coffeeBg] (current page.south west) rectangle (current page.north east);
+  \fill[coffeeDeep] (current page.north west) rectangle ([yshift=-1.55cm]current page.north east);
+  \fill[coffeeDeep,opacity=.28] ([yshift=-1.55cm]current page.north west) rectangle (current page.south east);
+
+  \foreach \x/\y/\r/\o in {1.2/-4.0/1.8/.08,18.8/-4.7/2.2/.07,2.0/-20.4/2.8/.06,18.0/-25.0/3.0/.08,10.5/-16.5/5.6/.05} {
+    \fill[coffeePanelLight,opacity=\o] ([xshift=\x cm,yshift=\y cm]current page.north west) circle (\r cm);
+  }
+
+  \node[anchor=west,font=\bfseries\large,text=coffeePanelLight] at ([xshift=1.35cm,yshift=-.78cm]current page.north west) {Don Gato - Inventario};
+  \node[anchor=east,font=\scriptsize,text=coffeePanelLight!78] at ([xshift=-1.35cm,yshift=-.78cm]current page.north east) {Informe de backend \, | \, SQA};
+
+  \node[
+    fill=coffeePanel,
+    draw=coffeePanelLight!70,
+    line width=.7pt,
+    rounded corners=18pt,
+    minimum width=13.7cm,
+    minimum height=22.8cm,
+    blur shadow={shadow blur steps=5,shadow xshift=0pt,shadow yshift=-5pt,shadow opacity=.35}
+  ] (card) at ([yshift=-.35cm]current page.center) {};
+
+  \coordinate (logo) at ([yshift=8.45cm]card.center);
+  \begin{scope}[shift={(logo)}]
+    \fill[coffeePanelLight] (0,0) circle (1.15cm);
+    \draw[coffeeInk,line width=1.15pt] (0,0) circle (1.15cm);
+    \draw[gold,line width=1.4pt] (0,0) circle (.98cm);
+    \fill[white] (-.34,.44) circle (.27cm);
+    \fill[white] (0,.55) circle (.33cm);
+    \fill[white] (.34,.44) circle (.27cm);
+    \fill[white] (-.48,.22) rectangle (.48,.55);
+    \draw[coffeeInk,line width=.5pt] (-.54,.22) -- (.54,.22);
+    \fill[coffeeInk] (0,-.18) ellipse (.48cm and .42cm);
+    \fill[coffeeInk] (-.36,.15) -- (-.68,.58) -- (-.18,.32) -- cycle;
+    \fill[coffeeInk] (.36,.15) -- (.68,.58) -- (.18,.32) -- cycle;
+    \fill[coffeePanelLight] (-.16,-.12) circle (.035cm);
+    \fill[coffeePanelLight] (.16,-.12) circle (.035cm);
+    \draw[coffeePanelLight,line width=.45pt] (-.1,-.25) .. controls (0,-.33) .. (.1,-.25);
+    \draw[coffeePanelLight,line width=.35pt] (-.22,-.21) -- (-.63,-.12);
+    \draw[coffeePanelLight,line width=.35pt] (-.22,-.29) -- (-.64,-.34);
+    \draw[coffeePanelLight,line width=.35pt] (.22,-.21) -- (.63,-.12);
+    \draw[coffeePanelLight,line width=.35pt] (.22,-.29) -- (.64,-.34);
+    \fill[coffeeButton] (-.48,-.72) -- (.48,-.72) -- (.33,-.48) -- (-.33,-.48) -- cycle;
+  \end{scope}
+
+  \node[font=\bfseries\fontsize{23}{27}\selectfont,text=black,align=center] at ([yshift=6.58cm]card.center) {Portal Administrador};
+  \node[font=\fontsize{11}{13}\selectfont,text=coffeeMute,align=center,text width=10.6cm] at ([yshift=5.42cm]card.center) {Backend de gestión de inventario con arquitectura\\hexagonal, seguridad JWT y trazabilidad de calidad};
+
+  \node[
+    fill=inputBlue,
+    draw=white!60,
+    rounded corners=8pt,
+    minimum width=10.4cm,
+    minimum height=1.18cm,
+    text=coffeeInk,
+    font=\bfseries\fontsize{10}{12}\selectfont,
+    align=center
+  ] at ([yshift=3.82cm]card.center) {UNIVERSIDAD DE LAS FUERZAS ARMADAS ESPE};
+
+  \node[text=coffeeInk,align=center,text width=10.6cm,font=\fontsize{10}{12}\selectfont] at ([yshift=2.62cm]card.center) {
+    Departamento de Ciencias de la Computación\\
+    Aseguramiento de la Calidad de Software
+  };
+
+  \node[
+    fill=coffeeButton,
+    rounded corners=8pt,
+    minimum width=10.4cm,
+    minimum height=1.25cm,
+    text=white,
+    font=\bfseries\fontsize{17}{20}\selectfont,
+    align=center,
+    blur shadow={shadow blur steps=4,shadow yshift=-2pt,shadow opacity=.22}
+  ] at ([yshift=.58cm]card.center) {Informe Técnico Don Gato Inventory};
+
+  \node[text=coffeeMute,align=center,text width=10.4cm,font=\fontsize{9}{11}\selectfont] at ([yshift=-.68cm]card.center) {
+    Commit documentado: \texttt{691fa0d}\\
+    \texttt{feat: initialize inventory management backend project with hexagonal architecture and security configuration}
+  };
+
+  \foreach \x/\txt in {-3.45/66 archivos,0/17 endpoints,3.45/JWT + SQA} {
+    \node[fill=coffeePanelLight,draw=coffeeButton!55,rounded corners=6pt,minimum width=2.85cm,minimum height=.72cm,font=\bfseries\scriptsize,text=coffeeInk] at ([xshift=\x cm,yshift=-2.42cm]card.center) {\txt};
+  }
+
+  \node[text=coffeeInk,align=center,text width=10.2cm,font=\bfseries\fontsize{13}{16}\selectfont] at ([yshift=-4.32cm]card.center) {Equipo de trabajo};
+  \node[text=coffeeInk,align=center,text width=10.2cm,font=\fontsize{11}{14}\selectfont] at ([yshift=-5.58cm]card.center) {
+    Mesias Mariscal\\
+    Gabriel Murillo\\
+    Denise Rea\\
+    Julio Viche
+  };
+
+  \draw[coffeeButton!45,line width=.6pt] ([xshift=-5.2cm,yshift=-7.42cm]card.center) -- ([xshift=5.2cm,yshift=-7.42cm]card.center);
+  \node[text=coffeeMute,align=center,font=\fontsize{10}{12}\selectfont] at ([yshift=-8.25cm]card.center) {Mayo 2026};
+\end{tikzpicture}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\listoftables
+\listoffigures
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Resumen Ejecutivo}
+
+\begin{infobox}[Qué se construyó]
+Se inicializó un backend empresarial para la cafetería Don Gato, orientado a gestión de inventario, productos, categorías y movimientos de stock. La implementación usa Spring Boot, JPA, validaciones Jakarta, seguridad con JWT, arquitectura hexagonal y un bloque de SQA basado en el modelo de calidad de McCall.
+\end{infobox}
+
+El commit transforma el proyecto base en una API REST completa. El núcleo del sistema ya no depende de detalles de infraestructura: el dominio contiene las reglas del negocio, la capa de aplicación coordina casos de uso, los puertos expresan contratos, la infraestructura implementa persistencia y seguridad, y la capa REST expone endpoints validados para consumidores externos.
+
+El resultado tiene una intención clara de calidad: proteger las operaciones de escritura con autenticación, impedir inventario negativo, dejar trazabilidad de cada ajuste de stock, centralizar errores y probar reglas críticas con JUnit. La arquitectura separa responsabilidades y facilita cambiar PostgreSQL/JPA, controladores o seguridad sin tocar el corazón del negocio.
+
+\section{Datos del Commit}
+
+\begin{table}[h!]
+\centering
+\caption{Resumen cuantitativo del commit documentado}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X}
+\toprule
+Hash & \texttt{691fa0d}\\
+Mensaje & \texttt{feat: initialize inventory management backend project with hexagonal architecture and security configuration}\\
+Archivos cambiados & 66\\
+Inserciones & 3129\\
+Eliminaciones & 64\\
+Capas creadas & Dominio, aplicación, infraestructura, interfaces REST, SQA y pruebas\\
+Endpoints REST & 17 rutas documentadas\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Objetivo Funcional}
+
+El sistema permite administrar:
+
+\begin{itemize}
+  \item Categorías de productos de la cafetería.
+  \item Productos con precio, stock, estado y categoría.
+  \item Movimientos de inventario de tipo \texttt{ENTRADA} o \texttt{SALIDA}.
+  \item Login con JWT para proteger operaciones que modifican datos.
+  \item Respuestas de error consistentes para validación, negocio y autenticación.
+\end{itemize}
+
+\chapter{Arquitectura Hexagonal}
+
+\section{Idea Central}
+
+La arquitectura hexagonal, también conocida como puertos y adaptadores, protege el núcleo del negocio. En este proyecto, el dominio no conoce Spring, JPA, HTTP ni JWT. Las dependencias apuntan hacia adentro: los controladores llaman casos de uso, los casos de uso dependen de puertos, y la infraestructura implementa esos puertos.
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  layer/.style={regular polygon, regular polygon sides=6, minimum width=#1, minimum height=#1, draw, line width=1pt, rounded corners=2pt},
+  note/.style={rounded corners=5pt, fill=panel, draw=tealDark!55, align=center, text width=3.2cm, inner sep=6pt}
+]
+  \node[layer=10.8cm, fill=teal!7, draw=tealDark!60] (outer) {};
+  \node[layer=8.1cm, fill=gold!10, draw=gold!80] (infra) {};
+  \node[layer=5.5cm, fill=violet!8, draw=violet!70] (app) {};
+  \node[layer=3.0cm, fill=leaf!12, draw=leaf!80] (domain) {};
+  \node[align=center,text=deepNavy,font=\bfseries] at (domain.center) {Dominio\\\footnotesize reglas puras};
+  \node[align=center,text=deepNavy,font=\bfseries] at (0,2.25) {Aplicación\\\footnotesize casos de uso y puertos};
+  \node[align=center,text=deepNavy,font=\bfseries] at (0,3.75) {Infraestructura\\\footnotesize JPA, seguridad, configuración};
+  \node[align=center,text=deepNavy,font=\bfseries] at (0,5.2) {Interfaces REST\\\footnotesize controladores, DTOs, mappers};
+
+  \node[note] (rest) at (-5.8,2.4) {HTTP/JSON\\Controladores REST};
+  \node[note] (db) at (5.8,2.4) {PostgreSQL\\Repositorios JPA};
+  \node[note] (jwt) at (-5.7,-2.5) {JWT\\Filtro y tokens};
+  \node[note] (tests) at (5.8,-2.5) {JUnit + JaCoCo\\Calidad medible};
+  \draw[-{Latex[length=3mm]},tealDark,thick] (rest) -- (outer);
+  \draw[-{Latex[length=3mm]},tealDark,thick] (db) -- (infra);
+  \draw[-{Latex[length=3mm]},tealDark,thick] (jwt) -- (infra);
+  \draw[-{Latex[length=3mm]},tealDark,thick] (tests) -- (app);
+\end{tikzpicture}
+\caption{Lectura visual de la arquitectura hexagonal aplicada al backend.}
+\end{figure}
+
+\section{Capas y Responsabilidades}
+
+\begin{longtable}{>{\bfseries}p{3.1cm} p{5.2cm} p{6.6cm}}
+\caption{Responsabilidades principales por capa}\\
+\toprule
+Capa & Paquetes & Qué resuelve \\
+\midrule
+\endfirsthead
+\toprule
+Capa & Paquetes & Qué resuelve \\
+\midrule
+\endhead
+Dominio & \pathcode{domain.model}, \pathcode{domain.exception} & Modela categorías, productos, movimientos, estados y reglas como stock no negativo, cantidades positivas y errores de negocio.\\
+Aplicación & \pathcode{application.usecases}, \pathcode{application.ports.out} & Coordina transacciones, valida existencia de entidades, aplica reglas de inventario y habla con repositorios mediante puertos.\\
+Infraestructura & \pathcode{infrastructure.persistence}, \pathcode{infrastructure.security}, \pathcode{infrastructure.config} & Implementa persistencia JPA, entidades, mappers, seguridad JWT, CORS, usuarios en memoria y datos semilla.\\
+Interfaces REST & \pathcode{interfaces.rest.controller}, \pathcode{dto}, \pathcode{mapper}, \pathcode{exception} & Expone la API HTTP, valida entradas, traduce DTOs y devuelve errores consistentes.\\
+SQA & \pathcode{sqa}, \pathcode{src/test}, \pathcode{.github/workflows} & Agrega motor de puntaje McCall, pruebas unitarias, JaCoCo y pipeline CI.\\
+\bottomrule
+\end{longtable}
+
+\section{Flujo de Dependencias}
+
+\begin{infobox}[Regla de dependencia]
+Las capas externas pueden conocer capas internas, pero las internas no deben conocer los detalles externos. Por eso \texttt{ProductUseCase} depende de \texttt{ProductRepositoryPort}, no de \texttt{JpaProductRepository}.
+\end{infobox}
+
+\begin{codewindow}[language=Java]{Ejemplo: caso de uso depende de puertos, no de JPA}
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional(readOnly = true)
+public class ProductUseCase {
+
+    private final ProductRepositoryPort productRepository;
+    private final CategoryRepositoryPort categoryRepository;
+
+    @Transactional
+    public Product create(Product product) {
+        product.validate();
+        validateCategoryExists(product.getCategoryId());
+        product.recalculateStatus();
+        product.setCreatedAt(LocalDateTime.now());
+        return productRepository.save(product);
+    }
+}
+\end{codewindow}
+
+\chapter{Complejidad Técnica y Decisiones}
+
+\section{Dominio Rico}
+
+El dominio no se limita a contener datos. En \texttt{Product} existen operaciones de negocio: recalcular estado, agregar stock, quitar stock y validar invariantes. Esta decisión reduce errores porque las reglas viajan con el objeto central del inventario.
+
+\begin{codewindow}[language=Java]{Reglas críticas dentro del modelo Product}
+public void removeStock(int quantity) {
+    if (quantity <= 0) {
+        throw new IllegalArgumentException("Exit quantity must be positive");
+    }
+    int currentStock = (this.stock == null) ? 0 : this.stock;
+    if (currentStock < quantity) {
+        throw new IllegalStateException(
+                String.format("Insufficient stock: available=%d, requested=%d", currentStock, quantity));
+    }
+    this.stock = currentStock - quantity;
+    recalculateStatus();
+}
+\end{codewindow}
+
+\section{Inventario Auditable}
+
+La actualización de stock no se hace directamente desde el endpoint de productos. El commit fuerza que el cambio de inventario pase por \texttt{StockMovementUseCase}. Así cada entrada o salida queda registrada con producto, cantidad, tipo, razón y fecha.
+
+\begin{infobox}[Decisión de integridad]
+El stock es una consecuencia de movimientos auditables. Esta es una decisión más segura que permitir edición libre de stock en \texttt{PUT /products/\{id\}}.
+\end{infobox}
+
+\section{Complejidad Operacional}
+
+\begin{longtable}{p{4.1cm} p{3.1cm} p{7.1cm}}
+\caption{Complejidad y costo conceptual de operaciones}\\
+\toprule
+Operación & Complejidad lógica & Comentario \\
+\midrule
+\endfirsthead
+\toprule
+Operación & Complejidad lógica & Comentario \\
+\midrule
+\endhead
+Validar producto/categoría/movimiento & $O(1)$ & Revisa campos simples y reglas locales.\\
+Crear producto & $O(1)$ + I/O DB & Valida categoría, calcula estado, persiste. El costo real depende de latencia de base de datos.\\
+Actualizar producto & $O(1)$ + I/O DB & Busca por ID, valida campos, no permite cambiar stock directo.\\
+Registrar movimiento & $O(1)$ + I/O DB & Busca producto, aplica entrada/salida, guarda producto y movimiento dentro de transacción.\\
+Listar productos/categorías/movimientos & $O(n)$ & Retorna todos los registros; para producción convendría paginación.\\
+Buscar productos por nombre & $O(n)$ o mejor con índice & La complejidad final depende del plan SQL y de índices disponibles.\\
+Validar token JWT & $O(1)$ respecto al tamaño del sistema & Verifica firma HMAC y extrae usuario; luego carga detalles del usuario en memoria.\\
+\bottomrule
+\end{longtable}
+
+\section{Transacciones}
+
+Los casos de uso están anotados con \texttt{@Transactional}. Las lecturas usan \texttt{readOnly=true}; las escrituras abren transacciones completas. En movimientos de stock, producto y movimiento se guardan como una unidad lógica: si falla la salida por stock insuficiente, no se debe persistir un movimiento incorrecto.
+
+\section{Modelo de Calidad de McCall}
+
+\begin{table}[h!]
+\centering
+\caption{Trazabilidad entre decisiones y factores McCall}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.2cm} X X}
+\toprule
+Factor & Implementación & Evidencia \\
+\midrule
+Correctness & Validaciones de dominio y DTOs & \texttt{Product.validate}, \texttt{StockMovement.validate}, Jakarta Validation\\
+Integrity & JWT, stock auditable, errores sin stacktrace & \texttt{SecurityConfig}, \texttt{JwtAuthenticationFilter}, \texttt{GlobalExceptionHandler}\\
+Testability & Pruebas aisladas de dominio y casos de uso & \texttt{ProductTest}, \texttt{StockMovementUseCaseTest}, JaCoCo\\
+Maintainability & Capas separadas y mappers explícitos & REST mapper, persistence mapper, puertos de repositorio\\
+Portability & Docker Compose y JPA & PostgreSQL containerizado, entidades ORM\\
+Interoperability & API REST JSON & Controladores, DTOs y códigos HTTP claros\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{API REST y Endpoints}
+
+\section{Reglas Generales}
+
+\begin{infobox}[Base URL]
+Servidor local por defecto: \texttt{http://localhost:8080}. Todas las rutas públicas y protegidas están bajo \texttt{/api/v1}.
+\end{infobox}
+
+La seguridad configurada permite acceso público a \texttt{/api/v1/auth/**}, a lecturas de categorías y a lecturas de productos. El resto de operaciones requiere header:
+
+\begin{codewindow}[language=Text]{Header requerido para operaciones protegidas}
+Authorization: Bearer <token-jwt>
+\end{codewindow}
+
+\section{Tabla Completa de Endpoints}
+
+\rowcolors{2}{panel}{white}
+\begin{longtable}{p{1.6cm} p{5.2cm} p{2.6cm} p{5.9cm}}
+\caption{Todos los endpoints disponibles en el backend}\\
+\toprule
+Método & Endpoint & Seguridad & Uso \\
+\midrule
+\endfirsthead
+\toprule
+Método & Endpoint & Seguridad & Uso \\
+\midrule
+\endhead
+\POST & \pathcode{/api/v1/auth/login} & Público & Autentica usuario y devuelve JWT. Body: \texttt{AuthRequestDTO}. Respuesta: \texttt{AuthResponseDTO}.\\
+\GET & \pathcode{/api/v1/categories} & Público & Lista todas las categorías. Respuesta: lista de \texttt{CategoryResponseDTO}.\\
+\GET & \pathcode{/api/v1/categories/{id}} & Público & Obtiene categoría por ID. Devuelve 404 si no existe.\\
+\POST & \pathcode{/api/v1/categories} & JWT requerido & Crea categoría. Body: \texttt{CategoryCreateDTO}. Respuesta 201.\\
+\PUT & \pathcode{/api/v1/categories/{id}} & JWT requerido & Actualiza categoría completa. Body: \texttt{CategoryCreateDTO}.\\
+\DELETE & \pathcode{/api/v1/categories/{id}} & JWT requerido & Elimina categoría por ID. Respuesta 204.\\
+\GET & \pathcode{/api/v1/products} & Público & Lista todos los productos. Respuesta: lista de \texttt{ProductResponseDTO}.\\
+\GET & \pathcode{/api/v1/products/{id}} & Público & Obtiene producto por ID. Devuelve 404 si no existe.\\
+\GET & \pathcode{/api/v1/products/category/{categoryId}} & Público & Lista productos asociados a una categoría existente.\\
+\GET & \pathcode{/api/v1/products/status/{status}} & Público & Filtra por estado. Valores: \texttt{AVAILABLE}, \texttt{OUT\_OF\_STOCK}.\\
+\GET & \pathcode{/api/v1/products/search?name={texto}} & Público & Busca productos por nombre ignorando mayúsculas/minúsculas.\\
+\POST & \pathcode{/api/v1/products} & JWT requerido & Crea producto. Body: \texttt{ProductCreateDTO}. Respuesta 201.\\
+\PUT & \pathcode{/api/v1/products/{id}} & JWT requerido & Actualiza nombre, precio y categoría. No actualiza stock directo.\\
+\DELETE & \pathcode{/api/v1/products/{id}} & JWT requerido & Elimina producto por ID. Respuesta 204.\\
+\POST & \pathcode{/api/v1/stock-movements} & JWT requerido & Registra entrada/salida y actualiza stock. Body: \texttt{StockMovementCreateDTO}. Respuesta 201.\\
+\GET & \pathcode{/api/v1/stock-movements} & JWT requerido & Lista todos los movimientos de stock.\\
+\GET & \pathcode{/api/v1/stock-movements/product/{productId}} & JWT requerido & Lista movimientos de un producto. Devuelve 404 si el producto no existe.\\
+\bottomrule
+\end{longtable}
+\rowcolors{2}{}{}
+
+\section{Contratos de Entrada}
+
+\begin{longtable}{p{3.5cm} p{5.0cm} p{6.2cm}}
+\caption{DTOs de entrada y validaciones}\\
+\toprule
+DTO & Campos & Validaciones principales \\
+\midrule
+\endfirsthead
+\toprule
+DTO & Campos & Validaciones principales \\
+\midrule
+\endhead
+\texttt{AuthRequestDTO} & \texttt{username}, \texttt{password} & Ambos obligatorios con \texttt{@NotBlank}.\\
+\texttt{CategoryCreateDTO} & \texttt{name}, \texttt{description} & \texttt{name} obligatorio y máximo 100 caracteres; \texttt{description} máximo 255.\\
+\texttt{ProductCreateDTO} & \texttt{name}, \texttt{price}, \texttt{stock}, \texttt{categoryId} & Nombre obligatorio, precio no negativo, stock inicial no negativo, categoría obligatoria.\\
+\texttt{ProductUpdateDTO} & \texttt{name}, \texttt{price}, \texttt{categoryId} & Nombre y precio obligatorios; categoría opcional pero si llega debe existir.\\
+\texttt{StockMovementCreateDTO} & \texttt{productId}, \texttt{type}, \texttt{quantity}, \texttt{reason} & Producto, tipo y razón obligatorios; cantidad mínima 1.\\
+\bottomrule
+\end{longtable}
+
+\section{Enums Expuestos}
+
+\begin{table}[h!]
+\centering
+\caption{Valores enumerados permitidos}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{4cm} X}
+\toprule
+Enum & Valores \\
+\midrule
+\texttt{ProductStatus} & \texttt{AVAILABLE}, \texttt{OUT\_OF\_STOCK}\\
+\texttt{MovementType} & \texttt{ENTRADA}, \texttt{SALIDA}\\
+\texttt{MovementReason} & \texttt{VENTA}, \texttt{REPOSICION}, \texttt{AJUSTE}, \texttt{DEVOLUCION}, \texttt{MERMA}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Ejemplos de Uso}
+
+\begin{codewindow}[language=Text]{Login}
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"admin\",\"password\":\"dongato2026\"}"
+\end{codewindow}
+
+\begin{codewindow}[language=Text]{Crear producto}
+curl -X POST http://localhost:8080/api/v1/products \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d "{\"name\":\"Latte\",\"price\":3.50,\"stock\":20,\"categoryId\":1}"
+\end{codewindow}
+
+\begin{codewindow}[language=Text]{Registrar salida de stock}
+curl -X POST http://localhost:8080/api/v1/stock-movements \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d "{\"productId\":1,\"type\":\"SALIDA\",\"quantity\":2,\"reason\":\"VENTA\"}"
+\end{codewindow}
+
+\chapter{Seguridad}
+
+\section{Autenticación JWT}
+
+El backend usa autenticación stateless. El usuario llama \texttt{/api/v1/auth/login}, Spring Security valida credenciales en memoria y \texttt{JwtTokenProvider} genera un token firmado con HMAC-SHA256. En cada request posterior, \texttt{JwtAuthenticationFilter} extrae el header \texttt{Authorization}, valida el token y registra la autenticación en el \texttt{SecurityContext}.
+
+\begin{codewindow}[language=Java]{Reglas de autorización}
+.authorizeHttpRequests(auth -> auth
+        .requestMatchers("/api/v1/auth/**").permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+        .anyRequest().authenticated()
+)
+\end{codewindow}
+
+\section{Usuarios de Prueba}
+
+\begin{table}[h!]
+\centering
+\caption{Usuarios configurados en memoria}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3cm} p{4cm} X}
+\toprule
+Usuario & Contraseña & Rol \\
+\midrule
+\texttt{admin} & \texttt{dongato2026} & \texttt{ADMIN}\\
+\texttt{cajero} & \texttt{cafe123} & \texttt{USER}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[Nota de endurecimiento]
+Para producción, estos usuarios deben migrarse a una tabla de usuarios, la clave JWT debe vivir en variables de entorno o gestor de secretos, y se debería agregar refresh token, rotación de claves, políticas de expiración y auditoría de intentos fallidos.
+\end{warningbox}
+
+\section{CORS y Sesiones}
+
+La API está preparada para frontends locales en \texttt{http://localhost:3000} y \texttt{http://localhost:5173}. La política usa sesiones stateless y desactiva CSRF porque la API no depende de cookies de sesión.
+
+\chapter{Persistencia y Datos}
+
+\section{Modelo Persistente}
+
+La infraestructura contiene entidades JPA separadas de los modelos de dominio. Esta duplicación es intencional: el dominio representa reglas y el modelo persistente representa tablas. Los mappers traducen entre ambos mundos.
+
+\begin{infobox}[Por qué usar mappers]
+Los mappers evitan que anotaciones ORM y detalles de base de datos contaminen los modelos de negocio. Esto mejora mantenibilidad y portabilidad.
+\end{infobox}
+
+\section{Repositorios}
+
+Los repositorios JPA implementan consultas derivadas como:
+
+\begin{itemize}
+  \item Buscar productos por categoría.
+  \item Buscar productos por estado.
+  \item Buscar por nombre ignorando mayúsculas/minúsculas.
+  \item Listar movimientos por producto.
+\end{itemize}
+
+\section{Docker Compose}
+
+El servicio PostgreSQL queda configurado con imagen \texttt{postgres:16-alpine}, base \texttt{dongato\_db}, usuario \texttt{dongato\_user}, volumen persistente y healthcheck con \texttt{pg\_isready}.
+
+\chapter{Manejo de Errores}
+
+\section{Formato Común}
+
+Todos los errores se empaquetan en \texttt{ApiErrorDTO}, con estado HTTP, nombre del error, mensaje, ruta, timestamp y errores de campo cuando aplica.
+
+\begin{codewindow}[language=Java]{Respuesta de error estandarizada}
+ApiErrorDTO error = ApiErrorDTO.builder()
+        .status(status.value())
+        .error(status.getReasonPhrase())
+        .message(message)
+        .path(request.getRequestURI())
+        .timestamp(LocalDateTime.now())
+        .build();
+\end{codewindow}
+
+\section{Mapa de Excepciones}
+
+\begin{table}[h!]
+\centering
+\caption{Errores manejados por \texttt{GlobalExceptionHandler}}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{4.4cm} p{2.2cm} X}
+\toprule
+Excepción & HTTP & Motivo \\
+\midrule
+\texttt{ResourceNotFoundException} & 404 & Recurso inexistente.\\
+\texttt{BusinessRuleException} & 409 & Violación de regla de negocio, como stock insuficiente.\\
+\texttt{IllegalArgumentException} & 400 & Argumento inválido en dominio o aplicación.\\
+\texttt{MethodArgumentNotValidException} & 400 & Validación Jakarta fallida en DTO.\\
+\texttt{BadCredentialsException} & 401 & Usuario o contraseña inválidos.\\
+\texttt{Exception} & 500 & Error inesperado sin filtrar detalles internos.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Pruebas, SQA y CI/CD}
+
+\section{Pruebas Implementadas}
+
+El commit agrega pruebas unitarias para dominio, casos de uso y motor de calidad. Las reglas más sensibles quedan verificadas sin depender de HTTP ni de base de datos real.
+
+\begin{longtable}{p{5.6cm} p{8.7cm}}
+\caption{Cobertura conceptual de pruebas}\\
+\toprule
+Archivo de prueba & Qué verifica \\
+\midrule
+\endfirsthead
+\toprule
+Archivo de prueba & Qué verifica \\
+\midrule
+\endhead
+\texttt{ProductTest} & Validación de producto, entradas, salidas, stock insuficiente y cálculo automático de estado.\\
+\texttt{CategoryTest} & Invariantes básicas de categoría.\\
+\texttt{StockMovementTest} & Datos obligatorios y coherencia del movimiento.\\
+\texttt{CategoryUseCaseTest} & Creación, consulta, actualización y eliminación con repositorio simulado.\\
+\texttt{StockMovementUseCaseTest} & Entradas/salidas, persistencia de movimiento y error por stock insuficiente.\\
+\texttt{QualityScoringEngineTest} & Fórmula de puntaje, penalizaciones y rangos de calificación.\\
+\texttt{DonGatoInventoryApplicationTests} & Carga del contexto Spring.\\
+\bottomrule
+\end{longtable}
+
+\section{Motor de Calidad McCall}
+
+El motor calcula un puntaje de 0 a 100 con ponderaciones:
+
+\[
+\text{score} =
+0.30(\text{testability}) +
+0.30(\text{correctness}) +
+0.20(\text{maintainability}) +
+0.20(\text{integrity})
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Ponderaciones del motor de calidad}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{4cm} p{3cm} X}
+\toprule
+Factor & Peso & Métrica usada \\
+\midrule
+Correctness & 30\% & Bugs detectados.\\
+Testability & 30\% & Porcentaje de cobertura.\\
+Maintainability & 20\% & Code smells.\\
+Integrity & 20\% & Vulnerabilidades; tolerancia cero.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Pipeline}
+
+El workflow \texttt{ci-cd.yml} ejecuta checkout, prepara JDK, corre \texttt{mvn clean verify}, genera JaCoCo y sube reportes de cobertura y pruebas como artefactos.
+
+\begin{warningbox}[Observación técnica]
+El \texttt{pom.xml} declara \texttt{java.version=25}, mientras el workflow configura JDK 21. Conviene alinear ambas versiones antes de una entrega formal para evitar diferencias entre entorno local y CI.
+\end{warningbox}
+
+\chapter{Inventario de Archivos del Commit}
+
+\section{Resumen por Tipo de Cambio}
+
+\begin{table}[h!]
+\centering
+\caption{Distribución de archivos cambiados}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.5cm} p{3cm} X}
+\toprule
+Tipo & Cantidad & Detalle \\
+\midrule
+Agregados & 59 & Nuevo backend por capas, DTOs, seguridad, SQA y tests.\\
+Modificados & 5 & Pipeline, \texttt{.gitignore}, Docker Compose, \texttt{pom.xml}, propiedades.\\
+Eliminados & 2 & Clases base del paquete anterior \texttt{com.sqa\_inventory.backend}.\\
+Total & 66 & Alcance completo del commit \texttt{691fa0d}.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Lista de Archivos}
+
+\begin{longtable}{p{1.5cm} p{13cm}}
+\caption{Archivos activos documentados con código en el apéndice}\\
+\toprule
+Tipo & Ruta \\
+\midrule
+\endfirsthead
+\toprule
+Tipo & Ruta \\
+\midrule
+\endhead
+M & \pathcode{.github/workflows/ci-cd.yml}\\
+M & \pathcode{.gitignore}\\
+M & \pathcode{backend/compose.yaml}\\
+M & \pathcode{backend/pom.xml}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/DonGatoInventoryApplication.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/ports/out/CategoryRepositoryPort.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/ports/out/ProductRepositoryPort.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/ports/out/StockMovementRepositoryPort.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/usecases/CategoryUseCase.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/usecases/ProductUseCase.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/application/usecases/StockMovementUseCase.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/exception/BusinessRuleException.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/exception/InsufficientStockException.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/exception/ResourceNotFoundException.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/Category.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/MovementReason.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/MovementType.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/Product.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/ProductStatus.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/domain/model/StockMovement.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/config/DataSeeder.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/CategoryRepositoryAdapter.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/ProductRepositoryAdapter.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/StockMovementRepositoryAdapter.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/CategoryEntity.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/ProductEntity.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/StockMovementEntity.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/CategoryPersistenceMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/ProductPersistenceMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/StockMovementPersistenceMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaCategoryRepository.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaProductRepository.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaStockMovementRepository.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtAuthenticationFilter.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtTokenProvider.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/infrastructure/security/SecurityConfig.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/AuthController.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/CategoryController.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/ProductController.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/StockMovementController.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ApiErrorDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthRequestDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthResponseDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryCreateDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryResponseDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductCreateDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductResponseDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductUpdateDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementCreateDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementResponseDTO.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/exception/GlobalExceptionHandler.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/CategoryRestMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/ProductRestMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/StockMovementRestMapper.java}\\
+A & \pathcode{backend/src/main/java/com/dongato/inventory/sqa/QualityScoringEngine.java}\\
+M & \pathcode{backend/src/main/resources/application.properties}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/DonGatoInventoryApplicationTests.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/application/usecases/CategoryUseCaseTest.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/application/usecases/StockMovementUseCaseTest.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/domain/model/CategoryTest.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/domain/model/ProductTest.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/domain/model/StockMovementTest.java}\\
+A & \pathcode{backend/src/test/java/com/dongato/inventory/sqa/QualityScoringEngineTest.java}\\
+A & \pathcode{backend/src/test/resources/application-test.properties}\\
+\bottomrule
+\end{longtable}
+
+Los dos archivos eliminados se incluyen como snapshot textual al final del apéndice para conservar la trazabilidad del total de 66 cambios.
+
+\appendix
+\chapter{Código Completo de los Archivos Activos}
+
+\section{Configuración de Proyecto}
+\CodeFile{YAML}{../../.github/workflows/ci-cd.yml}{.github/workflows/ci-cd.yml}
+\CodeFile{Text}{../../.gitignore}{.gitignore}
+\CodeFile{YAML}{../../backend/compose.yaml}{backend/compose.yaml}
+\CodeFile{XML}{../../backend/pom.xml}{backend/pom.xml}
+\CodeFile{Properties}{../../backend/src/main/resources/application.properties}{backend/src/main/resources/application.properties}
+\CodeFile{Properties}{../../backend/src/test/resources/application-test.properties}{backend/src/test/resources/application-test.properties}
+
+\section{Aplicación}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/DonGatoInventoryApplication.java}{backend/src/main/java/com/dongato/inventory/DonGatoInventoryApplication.java}
+
+\section{Dominio}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/Category.java}{backend/src/main/java/com/dongato/inventory/domain/model/Category.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/Product.java}{backend/src/main/java/com/dongato/inventory/domain/model/Product.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/ProductStatus.java}{backend/src/main/java/com/dongato/inventory/domain/model/ProductStatus.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/StockMovement.java}{backend/src/main/java/com/dongato/inventory/domain/model/StockMovement.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/MovementType.java}{backend/src/main/java/com/dongato/inventory/domain/model/MovementType.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/model/MovementReason.java}{backend/src/main/java/com/dongato/inventory/domain/model/MovementReason.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/exception/BusinessRuleException.java}{backend/src/main/java/com/dongato/inventory/domain/exception/BusinessRuleException.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/exception/InsufficientStockException.java}{backend/src/main/java/com/dongato/inventory/domain/exception/InsufficientStockException.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/domain/exception/ResourceNotFoundException.java}{backend/src/main/java/com/dongato/inventory/domain/exception/ResourceNotFoundException.java}
+
+\section{Aplicación: Puertos y Casos de Uso}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/ports/out/CategoryRepositoryPort.java}{backend/src/main/java/com/dongato/inventory/application/ports/out/CategoryRepositoryPort.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/ports/out/ProductRepositoryPort.java}{backend/src/main/java/com/dongato/inventory/application/ports/out/ProductRepositoryPort.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/ports/out/StockMovementRepositoryPort.java}{backend/src/main/java/com/dongato/inventory/application/ports/out/StockMovementRepositoryPort.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/usecases/CategoryUseCase.java}{backend/src/main/java/com/dongato/inventory/application/usecases/CategoryUseCase.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/usecases/ProductUseCase.java}{backend/src/main/java/com/dongato/inventory/application/usecases/ProductUseCase.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/application/usecases/StockMovementUseCase.java}{backend/src/main/java/com/dongato/inventory/application/usecases/StockMovementUseCase.java}
+
+\section{Infraestructura: Persistencia}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/CategoryEntity.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/CategoryEntity.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/ProductEntity.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/ProductEntity.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/StockMovementEntity.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/entity/StockMovementEntity.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/CategoryPersistenceMapper.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/CategoryPersistenceMapper.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/ProductPersistenceMapper.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/ProductPersistenceMapper.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/StockMovementPersistenceMapper.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/mapper/StockMovementPersistenceMapper.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaCategoryRepository.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaCategoryRepository.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaProductRepository.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaProductRepository.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaStockMovementRepository.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/repository/JpaStockMovementRepository.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/CategoryRepositoryAdapter.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/CategoryRepositoryAdapter.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/ProductRepositoryAdapter.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/ProductRepositoryAdapter.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/StockMovementRepositoryAdapter.java}{backend/src/main/java/com/dongato/inventory/infrastructure/persistence/adapter/StockMovementRepositoryAdapter.java}
+
+\section{Infraestructura: Seguridad y Configuración}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/config/DataSeeder.java}{backend/src/main/java/com/dongato/inventory/infrastructure/config/DataSeeder.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtAuthenticationFilter.java}{backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtAuthenticationFilter.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtTokenProvider.java}{backend/src/main/java/com/dongato/inventory/infrastructure/security/JwtTokenProvider.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/infrastructure/security/SecurityConfig.java}{backend/src/main/java/com/dongato/inventory/infrastructure/security/SecurityConfig.java}
+
+\section{Interfaces REST: Controladores}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/AuthController.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/AuthController.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/CategoryController.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/CategoryController.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/ProductController.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/ProductController.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/StockMovementController.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/controller/StockMovementController.java}
+
+\section{Interfaces REST: DTOs, Errores y Mappers}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ApiErrorDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ApiErrorDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthRequestDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthRequestDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthResponseDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/AuthResponseDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryCreateDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryCreateDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryResponseDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/CategoryResponseDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductCreateDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductCreateDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductResponseDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductResponseDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductUpdateDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/ProductUpdateDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementCreateDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementCreateDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementResponseDTO.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/dto/StockMovementResponseDTO.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/exception/GlobalExceptionHandler.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/exception/GlobalExceptionHandler.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/CategoryRestMapper.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/CategoryRestMapper.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/ProductRestMapper.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/ProductRestMapper.java}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/StockMovementRestMapper.java}{backend/src/main/java/com/dongato/inventory/interfaces/rest/mapper/StockMovementRestMapper.java}
+
+\section{SQA}
+\CodeFile{Java}{../../backend/src/main/java/com/dongato/inventory/sqa/QualityScoringEngine.java}{backend/src/main/java/com/dongato/inventory/sqa/QualityScoringEngine.java}
+
+\section{Pruebas}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/DonGatoInventoryApplicationTests.java}{backend/src/test/java/com/dongato/inventory/DonGatoInventoryApplicationTests.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/application/usecases/CategoryUseCaseTest.java}{backend/src/test/java/com/dongato/inventory/application/usecases/CategoryUseCaseTest.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/application/usecases/StockMovementUseCaseTest.java}{backend/src/test/java/com/dongato/inventory/application/usecases/StockMovementUseCaseTest.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/domain/model/CategoryTest.java}{backend/src/test/java/com/dongato/inventory/domain/model/CategoryTest.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/domain/model/ProductTest.java}{backend/src/test/java/com/dongato/inventory/domain/model/ProductTest.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/domain/model/StockMovementTest.java}{backend/src/test/java/com/dongato/inventory/domain/model/StockMovementTest.java}
+\CodeFile{Java}{../../backend/src/test/java/com/dongato/inventory/sqa/QualityScoringEngineTest.java}{backend/src/test/java/com/dongato/inventory/sqa/QualityScoringEngineTest.java}
+
+\chapter{Snapshots de Archivos Eliminados}
+
+\section{Snapshot de aplicación Spring anterior}
+\noindent\nolinkurl{backend/src/main/java/com/sqa_inventory/backend/BackendApplication.java}
+\begin{codewindow}[language=Java]{Archivo eliminado en el commit}
+package com.sqa_inventory.backend;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BackendApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(BackendApplication.class, args);
+    }
+
+}
+\end{codewindow}
+
+\section{Snapshot de prueba anterior}
+\noindent\nolinkurl{backend/src/test/java/com/sqa_inventory/backend/BackendApplicationTests.java}
+\begin{codewindow}[language=Java]{Archivo de prueba eliminado en el commit}
+package com.sqa_inventory.backend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class BackendApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+\end{codewindow}
+
+\end{document}

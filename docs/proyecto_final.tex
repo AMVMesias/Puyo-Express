@@ -1,0 +1,451 @@
+\documentclass[11pt,oneside]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,top=1.8cm,bottom=2.0cm,left=1.75cm,right=1.75cm,headheight=24pt]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc,positioning,shapes.geometric,arrows.meta,backgrounds,fit,shadows.blur}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{amsmath}
+
+% -----------------------------------------------------------------------------
+% Paleta visual
+% -----------------------------------------------------------------------------
+\definecolor{deepNavy}{HTML}{1C1917}
+\definecolor{ink}{HTML}{292524}
+\definecolor{panel}{HTML}{F7F9FC}
+\definecolor{paperWarm}{HTML}{FBF7EF}
+\definecolor{teal}{HTML}{EA580C}
+\definecolor{tealDark}{HTML}{C2410C}
+\definecolor{leaf}{HTML}{6DAA3F}
+\definecolor{gold}{HTML}{F0B84A}
+\definecolor{coral}{HTML}{E35D5B}
+\definecolor{violet}{HTML}{6B5DD3}
+\definecolor{coffeeBg}{HTML}{F97316}
+\definecolor{coffeeDeep}{HTML}{9A3412}
+\definecolor{coffeePanel}{HTML}{FFF7ED}
+\definecolor{coffeePanelLight}{HTML}{FFFFFF}
+\definecolor{coffeeInk}{HTML}{1C1917}
+\definecolor{coffeeMute}{HTML}{78716C}
+\definecolor{coffeeButton}{HTML}{EA580C}
+\definecolor{inputBlue}{HTML}{EAF0FF}
+\definecolor{codeBg}{HTML}{1E1E1E}
+\definecolor{codeHeader}{HTML}{333333}
+\definecolor{codeFrame}{HTML}{333333}
+\definecolor{codeGutter}{HTML}{1E1E1E}
+\definecolor{codeGutterLine}{HTML}{404040}
+\definecolor{codeText}{HTML}{D4D4D4}
+\definecolor{codeComment}{HTML}{6A9955}
+\definecolor{codeKeyword}{HTML}{569CD6}
+\definecolor{codeString}{HTML}{CE9178}
+\definecolor{codeNumber}{HTML}{B5CEA8}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=tealDark,
+  urlcolor=violet,
+  citecolor=tealDark,
+  pdftitle={Documento del Proyecto Final: Implementacion DevSecOps},
+  pdfauthor={Puyo Express}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=2pt}
+\renewcommand{\arraystretch}{1.25}
+\raggedbottom
+
+% -----------------------------------------------------------------------------
+% Encabezados, capitulos y tabla de contenidos.
+% -----------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{tealDark}{\textbf{Puyo Express}}}
+\rhead{\textcolor{ink}{DevSecOps Proyecto Final}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{tealDark}\leaders\hrule height \headrulewidth\hfill}}
+
+\titleformat{\section}[display]
+  {\normalfont\Large\bfseries\color{deepNavy}}
+  {\begin{tikzpicture}[baseline=(n.base)]
+     \node[fill=tealDark,text=white,rounded corners=4pt,inner xsep=8pt,inner ysep=4pt] (n) {Sección\ \thesection};
+   \end{tikzpicture}}
+  {6pt}
+  {\Large}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{tealDark}}
+  {\thesubsection}{0.6em}{}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{ink}}
+  {\thesubsubsection}{0.5em}{}
+
+% -----------------------------------------------------------------------------
+% Listings
+% -----------------------------------------------------------------------------
+\lstdefinelanguage{Text}{}
+\lstdefinelanguage{XML}{
+  morestring=[b]",
+  morestring=[s]{>}{<},
+  morecomment=[s]{<?}{?>},
+  morecomment=[s]{<!--}{-->},
+  stringstyle=\color{codeString},
+  identifierstyle=\color{codeKeyword},
+  keywordstyle=\color{codeKeyword},
+}
+
+\lstdefinestyle{codestyle}{
+  basicstyle=\ttfamily\scriptsize\color{codeText},
+  keywordstyle=\color{codeKeyword}\bfseries,
+  stringstyle=\color{codeString},
+  commentstyle=\color{codeComment}\itshape,
+  numberstyle=\tiny\color{codeNumber},
+  identifierstyle=\color{codeText},
+  numbers=left,
+  numbersep=12pt,
+  xleftmargin=28pt,
+  framexleftmargin=28pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  tabsize=2,
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  frame=none,
+  inputencoding=utf8,
+  extendedchars=true,
+}
+
+\tcbset{
+  concept/.style={
+    enhanced,
+    breakable,
+    arc=6pt,
+    boxrule=0.7pt,
+    left=9pt,
+    right=9pt,
+    top=7pt,
+    bottom=7pt,
+    colback=panel,
+    colframe=tealDark,
+    drop fuzzy shadow=black!18
+  },
+  codebox/.style={
+    enhanced,
+    breakable,
+    listing only,
+    colback=codeBg,
+    colframe=codeFrame,
+    coltitle=white,
+    colbacktitle=codeHeader,
+    fonttitle=\bfseries\scriptsize,
+    lefttitle=36pt,
+    righttitle=36pt,
+    halign title=center,
+    arc=6pt,
+    boxrule=0.65pt,
+    top=1.5mm,
+    bottom=1.5mm,
+    left=0mm,
+    right=1.2mm,
+    drop fuzzy shadow=black!35,
+    underlay unbroken and first={
+      \fill[codeGutter] ([xshift=0.6pt,yshift=-17.5pt]frame.north west) rectangle ([xshift=37pt,yshift=0.6pt]frame.south west);
+      \draw[codeGutterLine,line width=.35pt] ([xshift=37pt,yshift=-17.5pt]frame.north west) -- ([xshift=37pt,yshift=0.6pt]frame.south west);
+    },
+    underlay middle and last={
+      \fill[codeGutter] ([xshift=0.6pt,yshift=-0.6pt]frame.north west) rectangle ([xshift=37pt,yshift=0.6pt]frame.south west);
+      \draw[codeGutterLine,line width=.35pt] ([xshift=37pt,yshift=-0.6pt]frame.north west) -- ([xshift=37pt,yshift=0.6pt]frame.south west);
+    },
+    overlay unbroken and first={
+      \fill[coral] ([xshift=13pt,yshift=-10pt]frame.north west) circle (2.2pt);
+      \fill[gold] ([xshift=22pt,yshift=-10pt]frame.north west) circle (2.2pt);
+      \fill[leaf] ([xshift=31pt,yshift=-10pt]frame.north west) circle (2.2pt);
+    }
+  }
+}
+
+\newtcolorbox{infobox}[1][]{
+  concept,
+  title={#1},
+  colbacktitle=tealDark,
+  coltitle=white,
+  fonttitle=\bfseries
+}
+
+\newtcblisting{codewindow}[2][]{
+  codebox,
+  title={#2},
+  listing options={style=codestyle,#1}
+}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% Portada
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[coffeeBg] (current page.south west) rectangle (current page.north east);
+  \fill[coffeeDeep] (current page.north west) rectangle ([yshift=-1.55cm]current page.north east);
+  \fill[coffeeDeep,opacity=.28] ([yshift=-1.55cm]current page.north west) rectangle (current page.south east);
+
+  \foreach \x/\y/\r/\o in {1.2/-4.0/1.8/.08,18.8/-4.7/2.2/.07,2.0/-20.4/2.8/.06,18.0/-25.0/3.0/.08,10.5/-16.5/5.6/.05} {
+    \fill[coffeePanelLight,opacity=\o] ([xshift=\x cm,yshift=\y cm]current page.north west) circle (\r cm);
+  }
+
+  \node[anchor=west,font=\bfseries\large,text=coffeePanelLight] at ([xshift=1.35cm,yshift=-.78cm]current page.north west) {Puyo Express};
+  \node[anchor=east,font=\scriptsize,text=coffeePanelLight!78] at ([xshift=-1.35cm,yshift=-.78cm]current page.north east) {Documento de Seguridad};
+
+  \node[
+    fill=coffeePanel,
+    draw=coffeePanelLight!70,
+    line width=.7pt,
+    rounded corners=18pt,
+    minimum width=13.7cm,
+    minimum height=22.8cm,
+    blur shadow={shadow blur steps=5,shadow xshift=0pt,shadow yshift=-5pt,shadow opacity=.35}
+  ] (card) at ([yshift=-.35cm]current page.center) {};
+
+  \node[font=\bfseries\fontsize{23}{27}\selectfont,text=black,align=center] at ([yshift=6.58cm]card.center) {Documento del Proyecto Final:\\Implementación DevSecOps};
+  \node[font=\fontsize{11}{13}\selectfont,text=coffeeMute,align=center,text width=10.6cm] at ([yshift=4.5cm]card.center) {Integración de prácticas DevSecOps en la aplicación Puyo Express};
+
+  \node[
+    fill=inputBlue,
+    draw=white!60,
+    rounded corners=8pt,
+    minimum width=10.4cm,
+    minimum height=1.18cm,
+    text=coffeeInk,
+    font=\bfseries\fontsize{10}{12}\selectfont,
+    align=center
+  ] at ([yshift=2.5cm]card.center) {UNIVERSIDAD DE LAS FUERZAS ARMADAS ESPE};
+
+  \node[text=coffeeInk,align=center,text width=10.6cm,font=\fontsize{10}{12}\selectfont] at ([yshift=1.5cm]card.center) {
+    Grupo 6
+  };
+
+  \node[text=coffeeInk,align=center,text width=10.2cm,font=\bfseries\fontsize{13}{16}\selectfont] at ([yshift=-1.2cm]card.center) {Integrantes};
+  \node[text=coffeeInk,align=center,text width=10.2cm,font=\fontsize{11}{14}\selectfont] at ([yshift=-3.2cm]card.center) {
+    Moises Benalcazar\\
+    David Cepeda\\
+    Mesias Mariscal\\
+    Carlos Ñato\\
+    Denise Rea
+  };
+
+  \draw[coffeeButton!45,line width=.6pt] ([xshift=-5.2cm,yshift=-7.42cm]card.center) -- ([xshift=5.2cm,yshift=-7.42cm]card.center);
+  \node[text=coffeeMute,align=center,font=\fontsize{10}{12}\selectfont] at ([yshift=-8.25cm]card.center) {Fecha de entrega: 21 de Julio de 2026};
+\end{tikzpicture}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\section{Introducción y Contexto de la Aplicación}
+
+\subsection{Descripción del aplicativo}
+Puyo Express es una plataforma integral de gestión de entregas y logística basada en una arquitectura cliente-servidor moderna. Su funcionamiento central gira en torno a conectar restaurantes, clientes y repartidores, permitiendo el registro de usuarios, creación de órdenes de comida o encomiendas y el seguimiento continuo del estado de los envíos. Está desarrollada utilizando el framework Spring Boot para exponer una API RESTful robusta en el backend, mientras que el cliente consume dichos servicios a través de un frontend responsivo y dinámico (React/Vite). Todos los datos transaccionales, perfiles de usuario e históricos de pedidos son almacenados en una base de datos relacional PostgreSQL. Para potenciar la seguridad, modularidad y portabilidad, todo este ecosistema se despliega de manera orquestada y aislada en redes privadas mediante contenedores de Docker.
+
+\subsection{Objetivo de seguridad}
+El propósito de incorporar el ciclo DevSecOps en esta fase final es garantizar que la información sensible de los usuarios esté protegida desde la persistencia (cifrado) hasta el acceso mediante autenticación robusta y asegurar que todas las acciones relevantes sean trazables mediante auditoría, reduciendo así la superficie de ataque y los riesgos asociados a filtración de información (Data Breach).
+
+\section{Arquitectura e Inventario de Activos}
+
+\subsection{Diagrama de Arquitectura}
+\begin{infobox}[Límites de Confianza]
+Los servicios internos (Base de datos PostgreSQL y backend Spring Boot) se aíslan en las subredes \texttt{data\_net} y \texttt{app\_net}. Únicamente el proxy inverso (Frontend/Nginx) mapea un puerto al host público.
+\end{infobox}
+\vspace{10pt}
+\begin{center}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=2.2cm and 2.5cm,
+    basebox/.style={draw=tealDark, fill=panel, line width=1pt, rounded corners=6pt, inner sep=12pt, text centered, font=\bfseries\small, text=ink, align=center},
+    dbbox/.style={cylinder, draw=tealDark, fill=coffeePanel, aspect=0.3, inner sep=12pt, line width=1pt, text centered, font=\bfseries\small, text=coffeeInk, shape border rotate=90, align=center},
+    userbox/.style={draw=none, fill=inputBlue, rounded corners=6pt, inner sep=12pt, text centered, font=\bfseries\small, text=ink, align=center},
+    arrow/.style={-{Stealth[scale=1.2]}, line width=1.5pt, draw=teal},
+    biarrow/.style={{Stealth[scale=1.2]}-{Stealth[scale=1.2]}, line width=1.5pt, draw=teal},
+    trustboundary/.style={draw=coral, dashed, line width=1.5pt, rounded corners=8pt},
+    subnetboundary/.style={draw=violet, dotted, line width=1.5pt, rounded corners=8pt}
+]
+
+% Nodes
+\node[userbox] (client) {Cliente Externo\\(Navegador / Frontend)};
+\node[basebox, right=3.5cm of client] (proxy) {API Gateway\\(Nginx / Proxy)};
+\node[basebox, below=2.5cm of proxy] (backend) {Backend API\\(Spring Boot)};
+\node[dbbox, right=3.0cm of backend] (db) {Base de Datos\\(PostgreSQL)};
+
+% Arrows
+\draw[biarrow] (client) -- node[anchor=south, font=\scriptsize, text=ink, align=center] {Internet Pública\\HTTPS (TLS 1.2+)} (proxy);
+\draw[biarrow] (proxy) -- node[anchor=east, font=\scriptsize, text=ink, align=center] {Proxy Reverso\\(HTTP Intranet)} (backend);
+\draw[biarrow] (backend) -- node[anchor=south, font=\scriptsize, text=ink, align=center] {JPA / Hibernate\\(TCP 5432)} (db);
+
+% Trust Boundaries
+\begin{scope}[on background layer]
+    % App Net
+    \node[subnetboundary, fit=(proxy) (backend), inner sep=18pt, label={[anchor=south, text=violet, font=\bfseries\scriptsize]south:Subred Frontal Docker (\texttt{app\_net})}] (appnet) {};
+    % Data Net
+    \node[subnetboundary, fit=(backend) (db), inner sep=22pt, label={[anchor=north, text=violet, font=\bfseries\scriptsize]south:Subred de Datos Docker (\texttt{data\_net})}] (datanet) {};
+    
+    % Main Trust Boundary
+    \node[trustboundary, fit=(appnet) (datanet), inner sep=26pt, label={[anchor=south, text=coral, font=\bfseries\normalsize]north:LÍMITE DE CONFIANZA (Servidor de Producción)}] {};
+\end{scope}
+
+\end{tikzpicture}
+}
+\end{center}
+\vspace{10pt}
+
+\subsection{Tabla de Activos}
+A continuación, se listan los principales activos de información del sistema según lo establecido en el Inventario de Activos.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l l l l}
+\toprule
+\textbf{Activo} & \textbf{Ubicación y Endpoints} & \textbf{Criticidad} & \textbf{Protección} \\
+\midrule
+Contraseñas de Usuarios & \parbox[t]{4.8cm}{DB (\texttt{users.password}) \\ \texttt{/api/auth/*}} & Crítico & Hash BCrypt (costo 12) \\ \addlinespace
+Teléfono y Dirección & \parbox[t]{4.8cm}{DB (\texttt{orders.customer\_*}) \\ \texttt{/api/orders/*}} & Confidencial & AES-256-GCM por campo \\ \addlinespace
+Correo electrónico & \parbox[t]{4.8cm}{DB (\texttt{users.email}) \\ \texttt{/api/auth/*}, \texttt{/api/users/*}} & Confidencial & Cifrado de volumen y TLS \\ \addlinespace
+Claves Secretas (JWT, AES) & \parbox[t]{4.8cm}{Docker secrets \\ Interno en backend} & Crítico & 256 bits aleatorios, sin Git \\ \addlinespace
+Tokens JWT (Sesión) & \parbox[t]{4.8cm}{Cookies del Cliente \\ \texttt{/api/*}} & Crítico & HttpOnly, SameSite, Secure \\ \addlinespace
+Credenciales DB & \parbox[t]{4.8cm}{Docker secrets \\ Interno} & Crítico & Gestión manual fuera de Git \\ \addlinespace
+Logs de Auditoría & \parbox[t]{4.8cm}{stdout del contenedor \\ \texttt{/api/*}} & Confidencial & Sanitación (Sin payloads ni PII) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+\section{Seguridad en Autenticación y Prevención de Ataques}
+
+\subsection{Protección de Contraseñas (Hashing)}
+Las contraseñas de los usuarios se almacenan utilizando el algoritmo de derivación de claves \textbf{BCrypt} con un factor de trabajo adecuado (costo 12). Este mecanismo previene ataques de fuerza bruta y uso de tablas arcoíris mediante salting automático.
+
+\begin{codewindow}[language=Java]{Configuración BCrypt}
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(12);
+}
+\end{codewindow}
+
+\subsection{Mitigación de Ataques de Fuerza Bruta}
+Se implementa un mecanismo para penalizar los intentos erróneos de inicio de sesión.
+\begin{itemize}
+    \item Lógica de bloqueo: Se utiliza un filtro especializado (\texttt{AuthRateLimitFilter}) configurado para restringir las peticiones a los endpoints de autenticación. Se permite un máximo de 10 intentos por cada ventana de 15 minutos, y en caso de superar este límite, se bloquean las solicitudes temporalmente para proteger el acceso a las cuentas de los usuarios.
+\end{itemize}
+
+\textbf{Evidencia de Bloqueo:}
+\begin{codewindow}[language=Text]{Consola HTTP: Respuesta a Fuerza Bruta}
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Date: Mon, 20 Jul 2026 15:30:00 GMT
+
+{
+  "error": "Too Many Requests",
+  "message": "Maximum authentication attempts exceeded."
+}
+\end{codewindow}
+
+\section{Trazabilidad, Logs y Observabilidad}
+
+\subsection{Estructura de los Logs}
+El sistema registra de forma estructurada los eventos relevantes de auditoría y seguridad sin incluir cargas útiles (payloads), contraseñas ni datos PII (teléfonos o direcciones).
+
+\subsection{Integración con el Inventario de Activos}
+Los logs se asocian con los accesos e interacciones hacia los activos confidenciales enumerados en el inventario, permitiendo detectar de forma temprana intentos de acceso no autorizados o comportamientos anómalos.
+
+\subsection{Preparación para Herramientas de Observabilidad}
+El backend se encuentra configurado con la dependencia \texttt{logstash-logback-encoder} y un archivo \texttt{logback-spring.xml} que unifica la salida de la consola.
+
+\begin{codewindow}[language=XML]{Configuración Logback JSON}
+<configuration>
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="CONSOLE_JSON" />
+    </root>
+</configuration>
+\end{codewindow}
+Esto asegura que la salida esté siempre formateada como un JSON válido por línea, permitiendo que herramientas SIEM y plataformas como Elasticsearch, Splunk o Datadog puedan ingerir e indexar cada campo de auditoría automáticamente sin depender de configuraciones engorrosas de parseo de texto.
+
+\textbf{Evidencia de Log JSON:}
+\begin{codewindow}[language=Text]{Salida de Log (Fallo de Inicio de Sesión)}
+{"@timestamp":"2026-07-20T15:35:12.456Z", "message":"Authentication failed for user: admin", "logger_name":"AuthRateLimitFilter", "level":"WARN", "client_ip":"192.168.1.45", "event_type":"AUTH_FAILURE"}
+\end{codewindow}
+
+\section{Hardening}
+
+\subsection{Hardening en el Código}
+El cifrado a nivel de columna (AES-256-GCM) para teléfonos y direcciones garantiza la confidencialidad de los datos sensibles en reposo, protegiéndolos de exposiciones si ocurriera un volcado de la base de datos, lo cual es una buena práctica crucial para mitigar violaciones de privacidad y cumplir los lineamientos del inventario de activos. Adicionalmente, el uso de Data Transfer Objects (DTOs) con validación estricta de entradas previene inyecciones y asignaciones masivas no autorizadas.
+
+Por otro lado, se ha integrado un manejador global de excepciones mediante la clase \texttt{ApiExceptionHandler.java}. Esta es una buena práctica fundamental para ocultar los detalles internos de implementación. Garantiza que ninguna excepción de sistema inesperada logre retornar un \textit{stacktrace} o errores crudos de la base de datos al cliente. En su lugar, intercepta el fallo localmente y devuelve una respuesta HTTP 500 estándar y limpia, cerrando la brecha de Information Disclosure.
+
+\subsection{Hardening del Servidor}
+Se establecen límites estrictos en la recepción de payloads HTTP para mitigar ataques DoS a través del filtro \texttt{RequestSizeLimitFilter}. El entorno del host valida cortafuegos y el backend restringe puertos mediante redes Bridge aisladas en Docker.
+A nivel de frontend/proxy, un API Gateway desarrollado en Go inyecta de forma proactiva cabeceras de seguridad estrictas como Content Security Policy (CSP), \texttt{X-Frame-Options} y \texttt{Permissions-Policy}.
+
+\subsection{Ocultamiento de Versiones y Fingerprinting}
+Ocultar las cabeceras HTTP que revelan información interna impide que atacantes utilicen herramientas de reconocimiento (Fingerprinting) para mapear el software, identificar sus versiones y lanzar exploits específicos. En el proxy reverso, la directiva \texttt{server\_tokens off;} evita que Nginx exponga su número de versión, mientras que \texttt{proxy\_hide\_header Server;} bloquea la propagación de la identidad del servidor de origen hacia el cliente.
+
+En el backend, se configuró la propiedad \texttt{server.server-header: ""} dentro de \texttt{application.yml} para suprimir la cabecera predeterminada de "Apache Coyote" o "Tomcat" en todas las peticiones HTTP. Combinando esto con el manejador de errores \texttt{ApiExceptionHandler.java} que anula los \textit{stacktraces}, se mitiga efectivamente cualquier fuga de detalles internos tecnológicos que un atacante pudiera aprovechar.
+
+\begin{codewindow}[language=Text]{Ocultamiento en Nginx y Spring}
+# nginx.conf
+server_tokens off;
+proxy_hide_header Server;
+
+# application.yml
+server.server-header: ""
+\end{codewindow}
+
+\textbf{Evidencia de Cabeceras HTTP Seguras (Fingerprinting mitigado):}
+\begin{codewindow}[language=Text]{Petición cURL / Cabeceras Limpias}
+$ curl -I https://api.puyoexpress.com/health
+
+HTTP/1.1 200 OK
+Date: Mon, 20 Jul 2026 15:40:22 GMT
+Content-Type: application/json
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'
+# NOTA: Ausencia total de cabeceras 'Server' o 'X-Powered-By'
+\end{codewindow}
+
+\section{Conclusiones y Trabajo Futuro}
+
+\subsection{Conclusiones de Implementación}
+Durante la ejecución de las auditorías e implementaciones técnicas, el principal desafío fue comprender el impacto de la fuga de secretos persistentes en el historial de Git (como claves de bases de datos y cifrado), requiriendo una estricta rotación y reestructuración del control de versiones. Asimismo, el proceso de refactorizar la lógica para evitar problemas de autorización insegura (IDOR/BOLA), asegurando que cada usuario interactúe solo con sus propios datos, demostró la vital importancia de utilizar DTOs validados para sanear la capa de persistencia en Spring Boot.
+
+\subsection{Mejoras a futuro}
+Para continuar madurando el ciclo DevSecOps del proyecto en iteraciones futuras, se recomienda:
+\begin{itemize}
+    \item \textbf{Gestión automatizada del código estático:} Integrar herramientas SAST (Static Application Security Testing) directamente en un pipeline CI/CD para bloquear vulnerabilidades en tiempo de compilación.
+    \item \textbf{Mitigación avanzada:} Implementar una protección completa contra ataques CSRF (Cross-Site Request Forgery) exigiendo tokens robustos, y forzar la bandera \texttt{Secure} por defecto en las cookies críticas de la aplicación.
+    \item \textbf{Evolución y desempeño segura:} Sustituir la estrategia de persistencia actual (\texttt{ddl-auto}) por migraciones controladas usando herramientas como Flyway o Liquibase. Asimismo, emplear técnicas de paginación para mitigar riesgos de denegación de servicio (DoS) ante consultas masivas de información.
+\end{itemize}
+
+\end{document}
